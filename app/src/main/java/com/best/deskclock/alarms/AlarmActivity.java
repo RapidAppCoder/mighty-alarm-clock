@@ -80,6 +80,7 @@ import com.best.deskclock.utils.RingtoneUtils;
 import com.best.deskclock.utils.SdkUtils;
 import com.best.deskclock.utils.ThemeUtils;
 import com.best.deskclock.utils.Utils;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.File;
 
@@ -830,11 +831,15 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
         mBinding.dismissOnlyButton.setVisibility(GONE);
 
         mBinding.snoozeButton.setBackgroundColor(SettingsDAO.getSnoozeButtonColor(mPrefs, this));
-        mBinding.snoozeButton.setText(getString(R.string.button_action_snooze));
+        mBinding.snoozeButton.setText(buildSnoozeButtonLabel());
         mBinding.snoozeButton.setTypeface(mGeneralBoldTypeface);
         mBinding.snoozeButton.setContentDescription(getString(R.string.description_snooze_button));
         mBinding.snoozeButton.setVisibility(VISIBLE);
         mBinding.snoozeButton.setOnClickListener(this);
+        mBinding.snoozeButton.setOnLongClickListener(v -> {
+            showManualSnoozeDurationDialog();
+            return true;
+        });
 
         mBinding.dismissButton.setBackgroundColor(SettingsDAO.getDismissButtonColor(mPrefs, this));
         mBinding.dismissButton.setText(getString(isOccasionalAlarmDeletedAfterUse() ? R.string.delete : R.string.button_action_dismiss));
@@ -1148,7 +1153,10 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
 
             Events.sendAlarmEvent(action, R.string.label_deskclock);
         } else {
-            int snoozeDuration = mAlarmInstance.mSnoozeDuration;
+            int snoozeDuration = AlarmStateManager.computeNextSnoozeMinutes(this, mAlarm, mAlarmInstance);
+            if (snoozeDuration == ALARM_SNOOZE_DURATION_DISABLED) {
+                snoozeDuration = mAlarmInstance.mSnoozeDuration;
+            }
             final String descriptionText = buildTimeString(snoozeDuration);
             final String accessibilityText = getResources().getQuantityString(
                 R.plurals.alarm_alert_snooze_set, snoozeDuration, snoozeDuration);
@@ -1162,6 +1170,61 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
 
         // Unbind here, otherwise alarm will keep ringing until activity finishes.
         unbindAlarmService();
+    }
+
+    /**
+     * Snoozes the alarm using an explicit user-chosen duration, bypassing the progressive snooze
+     * computation. Triggered by a long-press on the snooze button.
+     */
+    private void snoozeWithExplicitDuration(int minutes) {
+        if (mAlarmHandled) {
+            return;
+        }
+        mAlarmHandled = true;
+        LOGGER.v("Snoozed with explicit duration (%d min): %s", minutes, mAlarmInstance);
+
+        final String descriptionText = buildTimeString(minutes);
+        final String accessibilityText = getResources().getQuantityString(R.plurals.alarm_alert_snooze_set, minutes, minutes);
+
+        displayAlarmActionMessage(R.string.alarm_alert_snoozed_text, descriptionText, accessibilityText);
+
+        AlarmStateManager.setSnoozeState(this, mAlarmInstance, false, minutes);
+
+        Events.sendAlarmEvent(R.string.action_snooze, R.string.label_deskclock);
+
+        unbindAlarmService();
+    }
+
+    /**
+     * Shows a dialog allowing the user to pick an explicit snooze duration, overriding both the
+     * alarm's configured duration and any progressive snooze extension for this snooze only.
+     */
+    private void showManualSnoozeDurationDialog() {
+        if (mAlarmHandled) {
+            return;
+        }
+        final int[] options = {5, 10, 15, 30, 60};
+        final String[] labels = new String[options.length];
+        for (int i = 0; i < options.length; i++) {
+            labels[i] = buildTimeString(options[i]);
+        }
+
+        new MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.mighty_choose_snooze_duration_title)
+            .setItems(labels, (dialog, which) -> snoozeWithExplicitDuration(options[which]))
+            .show();
+    }
+
+    /**
+     * @return the label to display on the snooze button, including the upcoming (possibly
+     * progressive) snooze duration in parentheses when applicable.
+     */
+    private String buildSnoozeButtonLabel() {
+        final int minutes = AlarmStateManager.computeNextSnoozeMinutes(this, mAlarm, mAlarmInstance);
+        if (minutes <= 0) {
+            return getString(R.string.button_action_snooze);
+        }
+        return getString(R.string.button_action_snooze) + " (" + buildTimeString(minutes) + ")";
     }
 
     /**

@@ -34,8 +34,11 @@ import com.best.deskclock.base.AppExecutors;
 import com.best.deskclock.data.DataModel;
 import com.best.deskclock.data.SettingsDAO;
 import com.best.deskclock.events.Events;
+import com.best.deskclock.mighty.ringtone.TagRingtoneResolver;
+import com.best.deskclock.mighty.stats.DeviceStats;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.AlarmInstance;
+import com.best.deskclock.provider.EventLogStore;
 import com.best.deskclock.tiles.AlarmTileService;
 import com.best.deskclock.uicomponents.toast.CustomToast;
 import com.best.deskclock.utils.AlarmUtils;
@@ -390,6 +393,13 @@ public final class AlarmStateManager extends BroadcastReceiver {
                 instance.mRingtone = RingtoneUtils.getRandomRingtoneUri();
             } else if (RingtoneUtils.isRandomCustomRingtone(alarm.alert)) {
                 instance.mRingtone = RingtoneUtils.getRandomCustomRingtoneUri();
+            } else {
+                // If the alarm/instance still uses a default ringtone, see if one of the alarm's
+                // tags defines a ringtone to use instead.
+                Uri tagRingtone = TagRingtoneResolver.resolve(context.getContentResolver(), alarm.id, instance.mRingtone);
+                if (tagRingtone != null) {
+                    instance.mRingtone = tagRingtone;
+                }
             }
         }
 
@@ -421,14 +431,52 @@ public final class AlarmStateManager extends BroadcastReceiver {
      * @param instance to set state to
      */
     public static void setSnoozeState(final Context context, AlarmInstance instance, boolean showToast) {
+        setSnoozeState(context, instance, showToast, null);
+    }
+
+    /**
+     * Same as {@link #setSnoozeState(Context, AlarmInstance, boolean)}, but allows the caller to
+     * force an explicit snooze duration (in minutes) for this snooze, bypassing both the alarm's
+     * configured snooze duration and any progressive snooze extension. Used when the user
+     * explicitly picks a duration (e.g. long-pressing the snooze button).
+     *
+     * @param explicitDurationMinutes the duration to snooze for, or {@code null} to use the
+     *                                normal (possibly progressive) computed duration
+     */
+    public static void setSnoozeState(final Context context, AlarmInstance instance, boolean showToast,
+                                      Integer explicitDurationMinutes) {
         final SharedPreferences prefs = getDefaultSharedPreferences(context);
-        final int snoozeMinutes = instance.mSnoozeDuration;
-        Calendar newAlarmTime = Calendar.getInstance();
-        // If the "Snooze duration" setting has been set to "None" simply dismiss the alarm.
-        if (snoozeMinutes == ALARM_SNOOZE_DURATION_DISABLED) {
+        final ContentResolver contentResolver = context.getContentResolver();
+        final Alarm alarm = instance.mAlarmId != null ? Alarm.getAlarm(contentResolver, instance.mAlarmId) : null;
+
+        final int baseSnoozeMinutes = instance.mSnoozeDuration;
+        // If the "Snooze duration" setting has been set to "None" simply dismiss the alarm,
+        // unless the user explicitly requested a specific snooze duration.
+        if (explicitDurationMinutes == null && baseSnoozeMinutes == ALARM_SNOOZE_DURATION_DISABLED) {
             deleteInstanceAndUpdateParent(context, instance, true);
             return;
         }
+
+        // Compute the progressive snooze duration for this upcoming snooze if the parent alarm
+        // has snooze extension enabled: base duration + (count - 1) * extension, capped by the
+        // configured maximum (if any). An explicit user-chosen duration always takes priority.
+        final int upcomingSnoozeCount = instance.mSnoozeCount + 1;
+        int snoozeMinutes;
+        if (explicitDurationMinutes != null) {
+            snoozeMinutes = Math.max(1, explicitDurationMinutes);
+        } else if (alarm != null && alarm.snoozeExtendEnabled) {
+            int extendedMinutes = alarm.snoozeDuration + (upcomingSnoozeCount - 1) * alarm.snoozeExtendMinutes;
+            if (alarm.snoozeExtendMaxMinutes > 0) {
+                extendedMinutes = Math.min(extendedMinutes, alarm.snoozeExtendMaxMinutes);
+            }
+            snoozeMinutes = Math.max(1, extendedMinutes);
+            LogUtils.i("Progressive snooze for instance " + instance.mId + ": snoozeCount=" + upcomingSnoozeCount
+                + ", computed duration=" + snoozeMinutes + " min");
+        } else {
+            snoozeMinutes = baseSnoozeMinutes;
+        }
+
+        Calendar newAlarmTime = Calendar.getInstance();
 
         // Stop alarm if this instance is firing it; a double vibration will be performed if enabled in settings
         // to indicate that the alarm is correctly snoozed.
@@ -446,17 +494,25 @@ public final class AlarmStateManager extends BroadcastReceiver {
             + AlarmUtils.getFormattedTime(context, newAlarmTime));
         instance.setAlarmTime(newAlarmTime);
         instance.mAlarmState = AlarmInstance.SNOOZE_STATE;
-        instance.updateInstance(context.getContentResolver());
+        instance.mSnoozeCount++;
+        instance.updateInstance(contentResolver);
+
+        EventLogStore.logEvent(contentResolver, EventLogStore.EVENT_ALARM_SNOOZED,
+            alarm != null ? alarm.stableUuid : null, instance.mLabel,
+            "snoozeMinutes=" + snoozeMinutes + ", snoozeCount=" + instance.mSnoozeCount);
+        DeviceStats.onAlarmSnoozed(context);
 
         // Setup instance notification and scheduling timers
         AlarmNotifications.showSnoozeNotification(context, instance);
         scheduleInstanceStateChange(context, instance.getAlarmTime(), instance, AlarmInstance.FIRED_STATE);
 
         // Display the snooze minutes in a toast.
+        final int finalSnoozeMinutes = snoozeMinutes;
         if (showToast) {
             AppExecutors.getMainThread().post(() -> {
                 String displayTime = String.format(
-                    context.getResources().getQuantityText(R.plurals.alarm_alert_snooze_set, snoozeMinutes).toString(), snoozeMinutes);
+                    context.getResources().getQuantityText(R.plurals.alarm_alert_snooze_set, finalSnoozeMinutes).toString(),
+                    finalSnoozeMinutes);
                 if (DataModel.getDataModel().isApplicationInForeground()) {
                     CustomToast.showLong(context, displayTime);
                 } else {
@@ -467,6 +523,29 @@ public final class AlarmStateManager extends BroadcastReceiver {
 
         // Instance time changed, so find next alarm that will fire and notify system
         updateNextAlarm(context);
+    }
+
+    /**
+     * Computes the snooze duration (in minutes) that would apply the next time the given instance
+     * is snoozed, taking progressive snooze extension into account. Useful for UI that wants to
+     * preview the upcoming snooze duration (e.g. a snooze button label).
+     */
+    public static int computeNextSnoozeMinutes(Context context, Alarm alarm, AlarmInstance instance) {
+        final int baseSnoozeMinutes = instance != null ? instance.mSnoozeDuration : alarm.snoozeDuration;
+        if (baseSnoozeMinutes == ALARM_SNOOZE_DURATION_DISABLED) {
+            return ALARM_SNOOZE_DURATION_DISABLED;
+        }
+
+        if (alarm == null || !alarm.snoozeExtendEnabled) {
+            return baseSnoozeMinutes;
+        }
+
+        final int upcomingSnoozeCount = (instance != null ? instance.mSnoozeCount : 0) + 1;
+        int extendedMinutes = alarm.snoozeDuration + (upcomingSnoozeCount - 1) * alarm.snoozeExtendMinutes;
+        if (alarm.snoozeExtendMaxMinutes > 0) {
+            extendedMinutes = Math.min(extendedMinutes, alarm.snoozeExtendMaxMinutes);
+        }
+        return Math.max(1, extendedMinutes);
     }
 
     /**
@@ -514,6 +593,10 @@ public final class AlarmStateManager extends BroadcastReceiver {
         if (instance.mAlarmId != null) {
             updateParentAlarm(context, instance);
         }
+
+        final Alarm missedAlarm = instance.mAlarmId != null ? Alarm.getAlarm(contentResolver, instance.mAlarmId) : null;
+        EventLogStore.logEvent(contentResolver, EventLogStore.EVENT_ALARM_MISSED,
+            missedAlarm != null ? missedAlarm.stableUuid : null, instance.mLabel, "instanceId=" + instance.mId);
 
         // Update alarm state
         instance.mAlarmState = AlarmInstance.MISSED_STATE;
@@ -626,6 +709,10 @@ public final class AlarmStateManager extends BroadcastReceiver {
 
         final ContentResolver contentResolver = context.getContentResolver();
         Alarm alarm = Alarm.getAlarm(contentResolver, instance.mAlarmId);
+
+        EventLogStore.logEvent(contentResolver, EventLogStore.EVENT_ALARM_DISMISSED,
+            alarm != null ? alarm.stableUuid : null, instance.mLabel, "instanceId=" + instance.mId);
+
         // Display the alarm dismissal warning in a toast
         if (alarm != null && showToast && !wasPreDismissed) {
             AppExecutors.getMainThread().post(() -> AlarmUtils.showDismissToast(context, alarm, instance));
