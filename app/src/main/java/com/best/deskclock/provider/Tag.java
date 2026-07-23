@@ -235,6 +235,27 @@ public final class Tag implements ClockContract.TagsColumns {
     }
 
     /**
+     * @return the distinct ids of every alarm that has at least one tag assigned.
+     */
+    public static List<Long> getAlarmIdsWithAnyTag(ContentResolver contentResolver) {
+        final List<Long> alarmIds = new LinkedList<>();
+        final String[] projection = {ClockContract.AlarmTagsColumns.ALARM_ID};
+        try (Cursor cursor = contentResolver.query(ClockContract.AlarmTagsColumns.CONTENT_URI,
+                projection, null, null, null)) {
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    final long alarmId = cursor.getLong(0);
+                    if (!alarmIds.contains(alarmId)) {
+                        alarmIds.add(alarmId);
+                    }
+                }
+            }
+        }
+
+        return alarmIds;
+    }
+
+    /**
      * @return every tag associated with the given alarm.
      */
     public static List<Tag> getTagsForAlarm(ContentResolver contentResolver, long alarmId) {

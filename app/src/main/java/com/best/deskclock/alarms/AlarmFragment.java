@@ -165,8 +165,13 @@ public final class AlarmFragment extends DeskClockFragment
     private boolean mFilterRepeatingOnly = false;
     private boolean mFilterOneShotOnly = false;
     private int mExtraSortMode = 0; // 0=default, 1=ring count desc, 2=created desc, 3=updated desc
-    private long mFilterTagId = Tag.INVALID_ID; // Tag.INVALID_ID means "All tags" (no tag filter)
-    private Set<Long> mFilterTagAlarmIds = null; // ids of alarms having mFilterTagId, or null if no tag filter is active
+    /** Spinner sentinel: show every alarm regardless of tags. */
+    private static final long FILTER_TAG_ALL = Tag.INVALID_ID;
+    /** Spinner sentinel: show only alarms that have no tags assigned. */
+    private static final long FILTER_TAG_UNTAGGED = -2L;
+
+    private long mFilterTagId = FILTER_TAG_ALL;
+    private Set<Long> mFilterTagAlarmIds = null; // whitelist of alarm ids for the active tag filter, or null if inactive
 
     // Controllers
     private AlarmAdapter mItemAdapter;
@@ -360,8 +365,7 @@ public final class AlarmFragment extends DeskClockFragment
 
     /**
      * Loads every user-defined {@link Tag} in the background and populates
-     * {@code alarmTagSpinner} with "All tags" followed by each tag's name. Selecting a tag
-     * asynchronously looks up the alarms associated with it and filters the list down to those.
+     * {@code alarmTagSpinner} with "All tags", "No tags", then each tag's name.
      */
     private void setupTagFilterSpinner() {
         final Context context = requireContext();
@@ -377,6 +381,7 @@ public final class AlarmFragment extends DeskClockFragment
 
                 final List<String> labels = new ArrayList<>();
                 labels.add(getString(R.string.mighty_tag_filter_all));
+                labels.add(getString(R.string.mighty_tag_filter_untagged));
                 for (Tag tag : tags) {
                     labels.add(tag.name);
                 }
@@ -390,11 +395,14 @@ public final class AlarmFragment extends DeskClockFragment
                     @Override
                     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                         if (position == 0) {
-                            mFilterTagId = Tag.INVALID_ID;
+                            mFilterTagId = FILTER_TAG_ALL;
                             mFilterTagAlarmIds = null;
                             applyFilters();
+                        } else if (position == 1) {
+                            mFilterTagId = FILTER_TAG_UNTAGGED;
+                            applyUntaggedFilter();
                         } else {
-                            final Tag selectedTag = tags.get(position - 1);
+                            final Tag selectedTag = tags.get(position - 2);
                             mFilterTagId = selectedTag.id;
                             applyTagFilter(selectedTag.id);
                         }
@@ -428,6 +436,35 @@ public final class AlarmFragment extends DeskClockFragment
                     return;
                 }
                 mFilterTagAlarmIds = alarmIds;
+                applyFilters();
+            });
+        });
+    }
+
+    /**
+     * Asynchronously builds the set of alarm ids that have no tags and applies it as a filter.
+     */
+    private void applyUntaggedFilter() {
+        final Context context = getContext();
+        if (context == null) {
+            return;
+        }
+        final ContentResolver cr = context.getContentResolver();
+
+        AppExecutors.getDiskIO().execute(() -> {
+            final Set<Long> taggedAlarmIds = new HashSet<>(Tag.getAlarmIdsWithAnyTag(cr));
+
+            AppExecutors.getMainThread().post(() -> {
+                if (mBinding == null || mFilterTagId != FILTER_TAG_UNTAGGED) {
+                    return;
+                }
+                final Set<Long> untaggedAlarmIds = new HashSet<>();
+                for (AlarmItemHolder holder : mAllItemHolders) {
+                    if (holder.item != null && !taggedAlarmIds.contains(holder.item.id)) {
+                        untaggedAlarmIds.add(holder.item.id);
+                    }
+                }
+                mFilterTagAlarmIds = untaggedAlarmIds;
                 applyFilters();
             });
         });

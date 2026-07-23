@@ -1574,6 +1574,7 @@
 
     <!-- Alarm list: tag filter -->
     <string name="mighty_tag_filter_all">All tags</string>
+    <string name="mighty_tag_filter_untagged">No tags</string>
 
 
     <!-- Interval repeat -->
