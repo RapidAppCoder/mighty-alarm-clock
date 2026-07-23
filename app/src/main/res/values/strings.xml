@@ -1593,4 +1593,16 @@
     <string name="mighty_interval_summary_with_max">%1$s · max %2$d×</string>
 
 
+
+
+    <!-- Sample alarms / tags seeded on first launch -->
+    <string name="mighty_sample_tag_work">Work</string>
+    <string name="mighty_sample_tag_home">Home</string>
+    <string name="mighty_sample_alarm_weekdays">Weekday wake-up (sample)</string>
+    <string name="mighty_sample_alarm_oneshot">One-shot weekend alarm (sample)</string>
+    <string name="mighty_sample_alarm_work_tag">Work – tagged (sample)</string>
+    <string name="mighty_sample_alarm_wifi">Home Wi-Fi (sample)</string>
+    <string name="mighty_sample_alarm_snooze_extend">Snooze extension (sample)</string>
+    <string name="mighty_sample_alarm_interval">Every 30 min, max 3× (sample)</string>
+
 </resources>
