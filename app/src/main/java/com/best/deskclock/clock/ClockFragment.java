@@ -198,6 +198,12 @@ public final class ClockFragment extends DeskClockFragment {
 
         mCityAdapter = new SelectedCitiesAdapter(
             requireContext(), mPrefs, mSelectedCities, mHasBlackAccentColor, regularTypeface, boldTypeface, mSettings);
+        mCityAdapter.setOnCityClickListener(city -> {
+            if (mBinding != null && mBinding.timezoneGlobeView != null
+                && mBinding.timezoneGlobeView.getVisibility() == VISIBLE) {
+                mBinding.timezoneGlobeView.focusCity(city);
+            }
+        });
 
         mBinding.cityRecyclerView.setAdapter(mCityAdapter);
 
@@ -364,7 +370,7 @@ public final class ClockFragment extends DeskClockFragment {
 
         mIsDigitalClock = mSettings.clockStyle == DataModel.ClockStyle.DIGITAL;
 
-        mShowTimezoneGlobe = mPrefs.getBoolean(KEY_DISPLAY_TIMEZONE_GLOBE, false);
+        mShowTimezoneGlobe = mPrefs.getBoolean(KEY_DISPLAY_TIMEZONE_GLOBE, true);
     }
 
     /**

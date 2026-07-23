@@ -46,6 +46,13 @@ public class SelectedCitiesAdapter extends RecyclerView.Adapter<RecyclerView.Vie
 
     public final String PAYLOAD_UPDATE_BACKGROUND = "PAYLOAD_UPDATE_BACKGROUND";
 
+    /**
+     * Called when the user taps a selected world-clock city in the list.
+     */
+    public interface OnCityClickListener {
+        void onCityClicked(City city);
+    }
+
     private final Context mContext;
     private final SharedPreferences mPrefs;
     private ClockSettings mSettings;
@@ -53,6 +60,7 @@ public class SelectedCitiesAdapter extends RecyclerView.Adapter<RecyclerView.Vie
     private final Typeface mRegularTypeface;
     private final Typeface mBoldTypeface;
     private final boolean mHasBlackAccentColor;
+    private OnCityClickListener mOnCityClickListener;
 
     private final Drawable.ConstantState mBgSingle;
     private final Drawable.ConstantState mBgTop;
@@ -83,6 +91,15 @@ public class SelectedCitiesAdapter extends RecyclerView.Adapter<RecyclerView.Vie
     public Drawable.ConstantState getBgTop() { return mBgTop; }
     public Drawable.ConstantState getBgMiddle() { return mBgMiddle; }
     public Drawable.ConstantState getBgBottom() { return mBgBottom; }
+
+    public void setOnCityClickListener(@Nullable OnCityClickListener listener) {
+        mOnCityClickListener = listener;
+    }
+
+    @Nullable
+    OnCityClickListener getOnCityClickListener() {
+        return mOnCityClickListener;
+    }
 
     @NonNull
     @Override

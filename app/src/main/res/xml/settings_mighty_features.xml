@@ -151,7 +151,7 @@
             android:key="key_display_timezone_globe"
             android:layout="@layout/settings_preference_layout"
             android:title="@string/mighty_display_timezone_globe_title"
-            android:defaultValue="false"
+            android:defaultValue="true"
             app:iconSpaceReserved="false"
             app:singleLineTitle="false" />
 

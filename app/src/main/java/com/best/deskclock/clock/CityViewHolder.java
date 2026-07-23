@@ -135,15 +135,25 @@ public class CityViewHolder extends RecyclerView.ViewHolder {
                 mBinding.worldClockCityContainer.cityNote.setVisibility(GONE);
             }
 
-            mBinding.getRoot().setOnClickListener(v -> {
-                LabelDialogFragment labelDialogFragment = LabelDialogFragment.newInstance(city.getId(), city.getName(), note);
-
-                LabelDialogFragment.show(((AppCompatActivity) mContext).getSupportFragmentManager(), labelDialogFragment);
+            // Long-press edits the city note; short tap focuses the city on the globe.
+            mBinding.getRoot().setOnLongClickListener(v -> {
+                LabelDialogFragment labelDialogFragment =
+                    LabelDialogFragment.newInstance(city.getId(), city.getName(), note);
+                LabelDialogFragment.show(((AppCompatActivity) mContext).getSupportFragmentManager(),
+                    labelDialogFragment);
+                return true;
             });
         } else {
-            mBinding.getRoot().setOnClickListener(null);
+            mBinding.getRoot().setOnLongClickListener(null);
             mBinding.worldClockCityContainer.cityNote.setVisibility(View.GONE);
         }
+
+        mBinding.getRoot().setOnClickListener(v -> {
+            final SelectedCitiesAdapter.OnCityClickListener listener = mAdapter.getOnCityClickListener();
+            if (listener != null) {
+                listener.onCityClicked(city);
+            }
+        });
     }
 
     public void updateBackground() {
