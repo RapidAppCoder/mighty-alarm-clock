@@ -520,53 +520,13 @@
     <string-array name="language_entries">
         <item>@string/settings_language_system</item>
         <item>@string/settings_language_english_us</item>
-        <item>@string/settings_language_french</item>
         <item>@string/settings_language_german</item>
-        <item>@string/settings_language_chinese_simplified_cn</item>
-        <item>@string/settings_language_estonian</item>
-        <item>@string/settings_language_italian</item>
-        <item>@string/settings_language_polish</item>
-        <item>@string/settings_language_portuguese</item>
-        <item>@string/settings_language_serbian</item>
-        <item>@string/settings_language_spanish</item>
-        <item>@string/settings_language_ukrainian</item>
-        <item>@string/settings_language_dutch</item>
-        <item>@string/settings_language_russian</item>
-        <item>@string/settings_language_turkish</item>
-        <item>@string/settings_language_korean</item>
-        <item>@string/settings_language_czech</item>
-        <item>@string/settings_language_chinese_traditional_tw</item>
-        <item>@string/settings_language_bulgarian</item>
-        <item>@string/settings_language_tamil</item>
-        <item>@string/settings_language_arabic</item>
-        <item>@string/settings_language_hungarian</item>
-        <item>@string/settings_language_hebrew</item>
     </string-array>
     <!-- Values that are retrieved from the ListPreference. These must match the language_entries above. -->
     <string-array name="language_values" translatable="false">
         <item>system_language_code</item>
         <item>en-US</item>
-        <item>fr</item>
         <item>de</item>
-        <item>zh-CN</item>
-        <item>et</item>
-        <item>it</item>
-        <item>pl</item>
-        <item>pt</item>
-        <item>sr</item>
-        <item>es</item>
-        <item>uk</item>
-        <item>nl</item>
-        <item>ru</item>
-        <item>tr</item>
-        <item>ko</item>
-        <item>cs</item>
-        <item>zh-TW</item>
-        <item>bg</item>
-        <item>ta</item>
-        <item>ar</item>
-        <item>hu</item>
-        <item>he</item>
     </string-array>
 
     <!-- Entries listed in the ListPreference when invoking the city sort preference -->
