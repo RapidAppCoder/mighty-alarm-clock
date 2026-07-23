@@ -10,6 +10,7 @@ import static com.best.deskclock.DeskClockApplication.getDefaultSharedPreference
 import static com.best.deskclock.settings.PreferencesDefaultValues.*;
 
 import android.app.Dialog;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -23,11 +24,25 @@ import android.media.AudioManager;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.InputType;
+import android.text.TextWatcher;
 import android.util.DisplayMetrics;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
+import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -45,6 +60,7 @@ import androidx.fragment.app.FragmentManager;
 
 import com.best.deskclock.DeskClock;
 import com.best.deskclock.R;
+import com.best.deskclock.base.AppExecutors;
 import com.best.deskclock.data.DataModel;
 import com.best.deskclock.data.SettingsDAO;
 import com.best.deskclock.data.Weekdays;
@@ -64,10 +80,13 @@ import com.best.deskclock.dialogfragment.SpinnerTimePickerDialogFragment;
 import com.best.deskclock.dialogfragment.VibrationPatternDialogFragment;
 import com.best.deskclock.dialogfragment.VolumeCrescendoDurationDialogFragment;
 import com.best.deskclock.events.Events;
+import com.best.deskclock.mighty.exchange.ExchangeManager;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.AlarmInstance;
+import com.best.deskclock.provider.Tag;
 import com.best.deskclock.ringtone.RingtonePickerActivity;
 import com.best.deskclock.uicomponents.CustomTooltip;
+import com.best.deskclock.uicomponents.toast.CustomToast;
 import com.best.deskclock.uidata.UiDataModel;
 import com.best.deskclock.utils.AlarmUtils;
 import com.best.deskclock.utils.DeviceUtils;
@@ -85,6 +104,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.timepicker.MaterialTimePicker;
 
 import java.util.ArrayList;
@@ -263,6 +284,7 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
         bindMissedAlarmRepeatLimit();
         bindCrescendoDuration();
         bindAlarmVolume();
+        bindMightyAlarmFeatures();
         bindDeleteButton();
         bindDuplicateButton();
 
@@ -827,6 +849,465 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
         mBinding.alarmVolumeLayout.setOnClickListener(openVolumeFragment);
     }
 
+    // ****************************
+    // ** "MIGHTY" ALARM FEATURES **
+    // ****************************
+
+    /**
+     * Populates {@code mighty_features_container} (a plain vertical LinearLayout placed at the
+     * bottom of the alarm edit bottom sheet's scroll content) with the controls for the "Mighty"
+     * per-alarm features: progressive snooze extension, the Wi-Fi enable/disable rule, and the
+     * "move to exchange folder" action.
+     *
+     * <p>These controls are built programmatically (rather than declared in the XML layout and
+     * exposed via ViewBinding) because their content is dynamic and/or numerous small pieces
+     * that don't warrant permanently bloating the generated binding class.</p>
+     */
+    private void bindMightyAlarmFeatures() {
+        mBinding.mightyFeaturesContainer.removeAllViews();
+
+        bindTagsSection();
+        bindSnoozeExtendSection();
+        bindWifiRuleSection();
+        bindExchangeSection();
+    }
+
+    private void bindTagsSection() {
+        mBinding.mightyFeaturesContainer.addView(createSectionHeader(getString(R.string.mighty_tags_section_title)));
+
+        final TextView summary = new TextView(requireContext());
+        summary.setTypeface(mGeneralTypeface);
+        summary.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        final int paddingH = (int) dpToPx(10, mDisplayMetrics);
+        final LinearLayout.LayoutParams summaryParams =
+            new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        summaryParams.setMargins(paddingH, 0, paddingH, (int) dpToPx(4, mDisplayMetrics));
+        summary.setLayoutParams(summaryParams);
+        refreshTagSummary(summary);
+        mBinding.mightyFeaturesContainer.addView(summary);
+
+        final MaterialButton editTagsButton =
+            new MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        editTagsButton.setText(getString(R.string.mighty_tags_edit_button));
+        editTagsButton.setTypeface(mGeneralTypeface);
+        final LinearLayout.LayoutParams buttonParams =
+            new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        buttonParams.setMargins(paddingH, 0, paddingH, (int) dpToPx(8, mDisplayMetrics));
+        editTagsButton.setLayoutParams(buttonParams);
+        editTagsButton.setOnClickListener(v -> {
+            Utils.performHapticFeedback(v, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
+            showAssignTagsDialog(summary);
+        });
+        mBinding.mightyFeaturesContainer.addView(editTagsButton);
+    }
+
+    private void refreshTagSummary(TextView summary) {
+        if (mAlarm == null || mAlarm.id == Alarm.INVALID_ID) {
+            summary.setText(getString(R.string.mighty_tags_none));
+            return;
+        }
+        final List<Tag> tags = Tag.getTagsForAlarm(requireContext().getContentResolver(), mAlarm.id);
+        if (tags.isEmpty()) {
+            summary.setText(getString(R.string.mighty_tags_none));
+            return;
+        }
+        final StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < tags.size(); i++) {
+            if (i > 0) {
+                builder.append(", ");
+            }
+            builder.append(tags.get(i).name);
+        }
+        summary.setText(builder.toString());
+    }
+
+    private void showAssignTagsDialog(TextView summary) {
+        if (mAlarm == null || mAlarm.id == Alarm.INVALID_ID) {
+            return;
+        }
+        final ContentResolver cr = requireContext().getContentResolver();
+        final List<Tag> allTags = Tag.getTags(cr);
+        if (allTags.isEmpty()) {
+            CustomToast.show(requireContext(), R.string.mighty_tags_create_first);
+            return;
+        }
+        final CharSequence[] names = new CharSequence[allTags.size()];
+        final boolean[] checked = new boolean[allTags.size()];
+        final List<Long> assigned = Tag.getTagIdsForAlarm(cr, mAlarm.id);
+        for (int i = 0; i < allTags.size(); i++) {
+            names[i] = allTags.get(i).name;
+            checked[i] = assigned.contains(allTags.get(i).id);
+        }
+        new MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.mighty_tags_assign_title)
+            .setMultiChoiceItems(names, checked, (dialog, which, isChecked) -> checked[which] = isChecked)
+            .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                Tag.clearTagsForAlarm(cr, mAlarm.id);
+                for (int i = 0; i < allTags.size(); i++) {
+                    if (checked[i]) {
+                        Tag.addTagToAlarm(cr, mAlarm.id, allTags.get(i).id);
+                    }
+                }
+                refreshTagSummary(summary);
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    private void bindSnoozeExtendSection() {
+        mBinding.mightyFeaturesContainer.addView(createSectionHeader(getString(R.string.mighty_snooze_extend_title)));
+
+        final LinearLayout controlsContainer = new LinearLayout(requireContext());
+        controlsContainer.setOrientation(LinearLayout.VERTICAL);
+        controlsContainer.setVisibility(mAlarm.snoozeExtendEnabled ? VISIBLE : GONE);
+
+        final LinearLayout minutesRow = createStepperRow(
+            getString(R.string.mighty_snooze_extend_minutes_label),
+            mAlarm.snoozeExtendMinutes, 1, 60, 1,
+            value -> getResources().getQuantityString(R.plurals.minutes_short, value, value),
+            value -> mAlarm.snoozeExtendMinutes = value);
+
+        final LinearLayout maxMinutesRow = createStepperRow(
+            getString(R.string.mighty_snooze_extend_max_minutes_label),
+            mAlarm.snoozeExtendMaxMinutes, 0, 180, 5,
+            value -> value == 0
+                ? getString(R.string.mighty_snooze_extend_no_max)
+                : getResources().getQuantityString(R.plurals.minutes_short, value, value),
+            value -> mAlarm.snoozeExtendMaxMinutes = value);
+
+        controlsContainer.addView(minutesRow);
+        controlsContainer.addView(maxMinutesRow);
+
+        final MaterialSwitch enabledSwitch = createSwitchRow(
+            getString(R.string.mighty_snooze_extend_enabled_title),
+            mAlarm.snoozeExtendEnabled,
+            (buttonView, isChecked) -> {
+                mAlarm.snoozeExtendEnabled = isChecked;
+                controlsContainer.setVisibility(isChecked ? VISIBLE : GONE);
+                Utils.performHapticFeedback(buttonView, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
+            });
+
+        mBinding.mightyFeaturesContainer.addView(enabledSwitch);
+        mBinding.mightyFeaturesContainer.addView(controlsContainer);
+    }
+
+    private void bindWifiRuleSection() {
+        mBinding.mightyFeaturesContainer.addView(createSectionHeader(getString(R.string.mighty_wifi_rule_title)));
+
+        final LinearLayout controlsContainer = new LinearLayout(requireContext());
+        controlsContainer.setOrientation(LinearLayout.VERTICAL);
+        controlsContainer.setVisibility(mAlarm.wifiRuleEnabled ? VISIBLE : GONE);
+
+        final EditText ssidField = createEditTextRow(getString(R.string.mighty_wifi_ssid_hint), mAlarm.wifiSsid);
+        ssidField.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                mAlarm.wifiSsid = s.toString();
+            }
+        });
+
+        final String[] conditionLabels = {
+            getString(R.string.mighty_wifi_condition_present),
+            getString(R.string.mighty_wifi_condition_absent)
+        };
+        final int conditionSelection = Alarm.WIFI_CONDITION_ABSENT.equals(mAlarm.wifiCondition) ? 1 : 0;
+        final LinearLayout conditionRow = createSpinnerRow(
+            getString(R.string.mighty_wifi_condition_label), conditionLabels, conditionSelection,
+            position -> mAlarm.wifiCondition = position == 1 ? Alarm.WIFI_CONDITION_ABSENT : Alarm.WIFI_CONDITION_PRESENT);
+
+        final String[] actionLabels = {
+            getString(R.string.mighty_wifi_action_enable),
+            getString(R.string.mighty_wifi_action_disable)
+        };
+        final int actionSelection = Alarm.WIFI_ACTION_DISABLE.equals(mAlarm.wifiAction) ? 1 : 0;
+        final LinearLayout actionRow = createSpinnerRow(
+            getString(R.string.mighty_wifi_action_label), actionLabels, actionSelection,
+            position -> mAlarm.wifiAction = position == 1 ? Alarm.WIFI_ACTION_DISABLE : Alarm.WIFI_ACTION_ENABLE);
+
+        controlsContainer.addView(ssidField);
+        controlsContainer.addView(conditionRow);
+        controlsContainer.addView(actionRow);
+
+        final MaterialSwitch enabledSwitch = createSwitchRow(
+            getString(R.string.mighty_wifi_rule_enabled_title),
+            mAlarm.wifiRuleEnabled,
+            (buttonView, isChecked) -> {
+                mAlarm.wifiRuleEnabled = isChecked;
+                controlsContainer.setVisibility(isChecked ? VISIBLE : GONE);
+                Utils.performHapticFeedback(buttonView, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
+            });
+
+        mBinding.mightyFeaturesContainer.addView(enabledSwitch);
+        mBinding.mightyFeaturesContainer.addView(controlsContainer);
+    }
+
+    private void bindExchangeSection() {
+        mBinding.mightyFeaturesContainer.addView(createSectionHeader(getString(R.string.mighty_category_exchange)));
+
+        final MaterialButton moveButton =
+            new MaterialButton(requireContext(), null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        moveButton.setText(getString(R.string.mighty_move_to_exchange_button));
+        moveButton.setTypeface(mGeneralTypeface);
+        moveButton.setIconResource(R.drawable.ic_share);
+
+        final int paddingH = (int) dpToPx(10, mDisplayMetrics);
+        final LinearLayout.LayoutParams params =
+            new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMargins(paddingH, (int) dpToPx(4, mDisplayMetrics), paddingH, (int) dpToPx(12, mDisplayMetrics));
+        moveButton.setLayoutParams(params);
+
+        moveButton.setOnClickListener(v -> {
+            Utils.performHapticFeedback(v, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
+            showMoveToExchangeDialog();
+        });
+
+        mBinding.mightyFeaturesContainer.addView(moveButton);
+    }
+
+    private void showMoveToExchangeDialog() {
+        final Context context = requireContext();
+        final List<ExchangeManager.ExchangeFolder> folders = ExchangeManager.getFolders(context);
+
+        if (folders.isEmpty()) {
+            CustomToast.show(context, R.string.mighty_exchange_no_folders_configured);
+            return;
+        }
+
+        final CharSequence[] names = new CharSequence[folders.size()];
+        for (int i = 0; i < folders.size(); i++) {
+            names[i] = folders.get(i).name;
+        }
+
+        new MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.mighty_move_to_exchange_title)
+            .setItems(names, (dialog, which) -> moveAlarmToExchangeFolder(folders.get(which)))
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    private void moveAlarmToExchangeFolder(ExchangeManager.ExchangeFolder folder) {
+        final Context appContext = requireContext().getApplicationContext();
+        final Alarm alarmToMove = mAlarm;
+
+        AppExecutors.getDiskIO().execute(() -> {
+            final boolean success = ExchangeManager.moveAlarmTo(appContext, alarmToMove, folder);
+
+            AppExecutors.getMainThread().post(() -> {
+                if (!isAdded()) {
+                    return;
+                }
+                if (success) {
+                    // The alarm ownership was just handed off to the exchange folder; skip
+                    // saveAlarmSettings() on dismiss so it isn't re-persisted/re-enabled.
+                    mIsDeleted = true;
+                    CustomToast.show(appContext, R.string.mighty_move_to_exchange_success);
+                    dismiss();
+                } else {
+                    CustomToast.show(appContext, R.string.mighty_move_to_exchange_failure);
+                }
+            });
+        });
+    }
+
+    /**
+     * Creates a small bold section header label used to visually separate the "Mighty" feature
+     * groups within {@code mighty_features_container}.
+     */
+    private TextView createSectionHeader(String text) {
+        final Context context = requireContext();
+
+        final TextView header = new TextView(context);
+        header.setText(text);
+        header.setTypeface(Typeface.create(mGeneralTypeface, Typeface.BOLD));
+        header.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        header.setTextColor(MaterialColors.getColor(context, androidx.appcompat.R.attr.colorPrimary, Color.BLACK));
+
+        final int paddingH = (int) dpToPx(10, mDisplayMetrics);
+        final LinearLayout.LayoutParams params =
+            new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMargins(paddingH, (int) dpToPx(16, mDisplayMetrics), paddingH, (int) dpToPx(4, mDisplayMetrics));
+        header.setLayoutParams(params);
+
+        return header;
+    }
+
+    /**
+     * Creates a full-width {@link MaterialSwitch} row used for the boolean on/off toggles of the
+     * "Mighty" feature sections (snooze extension enabled, Wi-Fi rule enabled).
+     */
+    private MaterialSwitch createSwitchRow(String label, boolean checked, CompoundButton.OnCheckedChangeListener listener) {
+        final Context context = requireContext();
+
+        final MaterialSwitch switchView = new MaterialSwitch(context);
+        switchView.setText(label);
+        switchView.setTypeface(mGeneralTypeface);
+        switchView.setChecked(checked);
+
+        final int paddingH = (int) dpToPx(10, mDisplayMetrics);
+        final LinearLayout.LayoutParams params =
+            new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMargins(paddingH, (int) dpToPx(4, mDisplayMetrics), paddingH, 0);
+        switchView.setLayoutParams(params);
+        switchView.setPadding(paddingH, (int) dpToPx(6, mDisplayMetrics), paddingH, (int) dpToPx(6, mDisplayMetrics));
+
+        // Set the listener last so setChecked() above doesn't spuriously trigger it.
+        switchView.setOnCheckedChangeListener(listener);
+
+        return switchView;
+    }
+
+    /**
+     * Creates a single-line text field row (e.g. for the Wi-Fi SSID) with a floating hint.
+     */
+    private EditText createEditTextRow(String hint, String initialValue) {
+        final Context context = requireContext();
+
+        final EditText editText = new EditText(context);
+        editText.setHint(hint);
+        editText.setTypeface(mGeneralTypeface);
+        editText.setText(initialValue);
+        editText.setInputType(InputType.TYPE_CLASS_TEXT);
+        editText.setSingleLine(true);
+        editText.setMaxLines(1);
+
+        final int paddingH = (int) dpToPx(10, mDisplayMetrics);
+        final LinearLayout.LayoutParams params =
+            new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMargins(paddingH, (int) dpToPx(4, mDisplayMetrics), paddingH, 0);
+        editText.setLayoutParams(params);
+
+        return editText;
+    }
+
+    /**
+     * Creates a row combining a label and a {@link Spinner} used to pick between a small fixed
+     * set of options (e.g. the Wi-Fi rule condition/action).
+     */
+    private LinearLayout createSpinnerRow(String label, String[] options, int initialSelection,
+                                           java.util.function.IntConsumer onSelected) {
+        final Context context = requireContext();
+        final int paddingH = (int) dpToPx(10, mDisplayMetrics);
+
+        final LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        final LinearLayout.LayoutParams rowParams =
+            new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rowParams.setMargins(paddingH, (int) dpToPx(4, mDisplayMetrics), paddingH, 0);
+        row.setLayoutParams(rowParams);
+
+        final TextView labelView = new TextView(context);
+        labelView.setText(label);
+        labelView.setTypeface(mGeneralTypeface);
+        labelView.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        final Spinner spinner = new Spinner(context);
+        final ArrayAdapter<String> adapter = new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, options);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
+        spinner.setSelection(initialSelection, false);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                onSelected.accept(position);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        row.addView(labelView);
+        row.addView(spinner);
+
+        return row;
+    }
+
+    /**
+     * Creates a "label / minus / value / plus" row used for small bounded integer settings
+     * (snooze extension minutes and maximum minutes).
+     *
+     * @param min            the minimum value (inclusive)
+     * @param max            the maximum value (inclusive)
+     * @param step           the amount by which each tap of minus/plus changes the value
+     * @param valueFormatter formats the current integer value into the text displayed between
+     *                       the minus/plus buttons
+     * @param onChange       invoked with the new value whenever it changes
+     */
+    private LinearLayout createStepperRow(String label, int initialValue, int min, int max, int step,
+                                           java.util.function.IntFunction<String> valueFormatter,
+                                           java.util.function.IntConsumer onChange) {
+        final Context context = requireContext();
+        final int paddingH = (int) dpToPx(10, mDisplayMetrics);
+        final int buttonSize = (int) dpToPx(36, mDisplayMetrics);
+
+        final LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        final LinearLayout.LayoutParams rowParams =
+            new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        rowParams.setMargins(paddingH, (int) dpToPx(4, mDisplayMetrics), paddingH, 0);
+        row.setLayoutParams(rowParams);
+
+        final TextView labelView = new TextView(context);
+        labelView.setText(label);
+        labelView.setTypeface(mGeneralTypeface);
+        labelView.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        final TextView valueView = new TextView(context);
+        valueView.setTypeface(mGeneralTypeface);
+        valueView.setGravity(Gravity.CENTER);
+        valueView.setMinWidth((int) dpToPx(64, mDisplayMetrics));
+        valueView.setText(valueFormatter.apply(initialValue));
+
+        final int[] currentValue = {initialValue};
+
+        final ImageButton minusButton = createStepperButton(context, R.drawable.ic_minus, buttonSize);
+        minusButton.setOnClickListener(v -> {
+            currentValue[0] = Math.max(min, currentValue[0] - step);
+            valueView.setText(valueFormatter.apply(currentValue[0]));
+            onChange.accept(currentValue[0]);
+            Utils.performHapticFeedback(v, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
+        });
+
+        final ImageButton plusButton = createStepperButton(context, R.drawable.ic_add, buttonSize);
+        plusButton.setOnClickListener(v -> {
+            currentValue[0] = Math.min(max, currentValue[0] + step);
+            valueView.setText(valueFormatter.apply(currentValue[0]));
+            onChange.accept(currentValue[0]);
+            Utils.performHapticFeedback(v, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
+        });
+
+        row.addView(labelView);
+        row.addView(minusButton);
+        row.addView(valueView);
+        row.addView(plusButton);
+
+        return row;
+    }
+
+    private ImageButton createStepperButton(Context context, int iconRes, int size) {
+        final ImageButton button = new ImageButton(context);
+        button.setImageResource(iconRes);
+        button.setLayoutParams(new LinearLayout.LayoutParams(size, size));
+        button.setPadding(0, 0, 0, 0);
+        button.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+
+        final TypedValue outValue = new TypedValue();
+        context.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true);
+        button.setBackgroundResource(outValue.resourceId);
+
+        return button;
+    }
+
     private void bindDeleteButton() {
         mBinding.deleteButton.setTypeface(mGeneralTypeface);
 
@@ -848,8 +1329,20 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
             Alarm duplicatedAlarm = new Alarm(mAlarm);
             duplicatedAlarm.id = Alarm.INVALID_ID;
             duplicatedAlarm.instanceState = AlarmInstance.SILENT_STATE;
+            if (duplicatedAlarm.label != null && !duplicatedAlarm.label.isEmpty()) {
+                duplicatedAlarm.label = duplicatedAlarm.label + " " + getString(R.string.mighty_copy_suffix);
+            }
 
-            mAlarmUpdateHandler.asyncAddAlarm(duplicatedAlarm);
+            final long originalAlarmId = mAlarm.id;
+
+            mAlarmUpdateHandler.asyncAddAlarm(duplicatedAlarm, true, savedAlarm ->
+                com.best.deskclock.base.AppExecutors.getDiskIO().execute(() -> {
+                    final android.content.ContentResolver cr = requireContext().getApplicationContext().getContentResolver();
+                    for (Long tagId : com.best.deskclock.provider.Tag.getTagIdsForAlarm(cr, originalAlarmId)) {
+                        com.best.deskclock.provider.Tag.addTagToAlarm(cr, savedAlarm.id, tagId);
+                    }
+                })
+            );
 
             Utils.performHapticFeedback(mBinding.duplicateButton, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
 

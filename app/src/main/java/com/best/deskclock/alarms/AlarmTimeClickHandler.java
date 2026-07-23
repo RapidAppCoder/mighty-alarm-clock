@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.media.AudioManager;
+import android.widget.EditText;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentManager;
@@ -29,6 +30,7 @@ import com.best.deskclock.events.Events;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.AlarmInstance;
 import com.best.deskclock.utils.LogUtils;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.Calendar;
 import java.util.List;
@@ -234,16 +236,7 @@ public final class AlarmTimeClickHandler {
     public void setAlarm(int hour, int minute) {
         if (mSelectedAlarm == null) {
             Alarm newAlarm = buildNewAlarm(hour, minute);
-
-            AlarmVisualCache.invalidate(newAlarm.id);
-
-            mAlarmUpdateHandler.asyncAddAlarm(newAlarm, false, addedAlarm ->
-                AppExecutors.getMainThread().post(() -> {
-                    if (mAlarmFragment.isAdded()) {
-                        mAlarmFragment.setPendingAlarmToEdit(addedAlarm);
-                    }
-                })
-            );
+            promptForNameThenCreate(newAlarm);
         } else {
             updateExistingAlarm(hour, minute, false);
         }
@@ -259,19 +252,48 @@ public final class AlarmTimeClickHandler {
 
         if (mSelectedAlarm == null) {
             Alarm newAlarm = buildNewAlarm(h, m);
-
-            AlarmVisualCache.invalidate(newAlarm.id);
-
-            mAlarmUpdateHandler.asyncAddAlarm(newAlarm, false, addedAlarm ->
-                AppExecutors.getMainThread().post(() -> {
-                    if (mAlarmFragment.isAdded()) {
-                        mAlarmFragment.setPendingAlarmToEdit(addedAlarm);
-                    }
-                })
-            );
+            promptForNameThenCreate(newAlarm);
         } else {
             updateExistingAlarm(h, m, true);
         }
+    }
+
+    /**
+     * Shows a dialog prompting the user for a label before creating a brand-new alarm. Canceling
+     * the dialog aborts creation of the alarm entirely.
+     */
+    private void promptForNameThenCreate(Alarm newAlarm) {
+        final EditText input = new EditText(mContext);
+        input.setHint(R.string.add_label);
+        input.setSingleLine(true);
+        final int paddingPx = (int) (16 * mContext.getResources().getDisplayMetrics().density);
+        input.setPadding(paddingPx, paddingPx / 2, paddingPx, paddingPx / 2);
+
+        new MaterialAlertDialogBuilder(mContext)
+            .setTitle(R.string.mighty_new_alarm_name_title)
+            .setView(input)
+            .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                final CharSequence text = input.getText();
+                if (text != null) {
+                    newAlarm.label = text.toString().trim();
+                }
+                createNewAlarm(newAlarm);
+            })
+            .setNegativeButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())
+            .setCancelable(true)
+            .show();
+    }
+
+    private void createNewAlarm(Alarm newAlarm) {
+        AlarmVisualCache.invalidate(newAlarm.id);
+
+        mAlarmUpdateHandler.asyncAddAlarm(newAlarm, false, addedAlarm ->
+            AppExecutors.getMainThread().post(() -> {
+                if (mAlarmFragment.isAdded()) {
+                    mAlarmFragment.setPendingAlarmToEdit(addedAlarm);
+                }
+            })
+        );
     }
 
     private Alarm buildNewAlarm(int hour, int minute) {

@@ -445,6 +445,16 @@
 
             </LinearLayout>
 
+            <!-- Section for the "Mighty" per-alarm features (snooze extension, Wi-Fi rule,
+                 move to exchange folder). Populated programmatically since these controls are
+                 dynamic (e.g. the list of exchange folders, the list of tags). -->
+            <LinearLayout
+                android:id="@+id/mighty_features_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintTop_toBottomOf="@id/alarm_volume_layout" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.core.widget.NestedScrollView>

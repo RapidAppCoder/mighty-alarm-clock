@@ -734,4 +734,12 @@
         <item>Asia/Kamchatka</item>
         <item>Asia/Damascus</item>
     </string-array>
+
+    <!-- Entries for the extra alarm sort spinner shown above the alarm list -->
+    <string-array name="mighty_alarm_sort_options">
+        <item>@string/sort_alarm_time</item>
+        <item>@string/mighty_sort_by_ring_count</item>
+        <item>@string/mighty_sort_by_created_date</item>
+        <item>@string/mighty_sort_by_updated_date</item>
+    </string-array>
 </resources>

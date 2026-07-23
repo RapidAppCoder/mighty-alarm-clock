@@ -13,13 +13,90 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <LinearLayout
+        android:id="@+id/alarm_filter_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="10dp"
+        android:paddingTop="4dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <EditText
+            android:id="@+id/alarm_search_edit_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/mighty_search_alarms_hint"
+            android:inputType="text"
+            android:maxLines="1"
+            android:importantForAutofill="no" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/alarm_filter_chip_group"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:singleSelection="false">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/alarm_filter_chip_enabled"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/mighty_filter_enabled" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/alarm_filter_chip_repeating"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/mighty_filter_repeating" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/alarm_filter_chip_one_shot"
+                        style="@style/Widget.Material3.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/mighty_filter_one_shot" />
+
+                </com.google.android.material.chip.ChipGroup>
+
+                <Spinner
+                    android:id="@+id/alarm_sort_spinner"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:entries="@array/mighty_alarm_sort_options" />
+
+                <!-- Populated programmatically with "All tags" + every user-defined Tag. -->
+                <Spinner
+                    android:id="@+id/alarm_tag_spinner"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp" />
+
+            </LinearLayout>
+
+        </HorizontalScrollView>
+
+    </LinearLayout>
+
     <include
         layout="@layout/volume_warning_banner"
         android:id="@+id/alarm_volume_warning_banner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="10dp"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/alarm_filter_bar"
         app:layout_constraintBottom_toTopOf="@+id/alarm_recycler_view" />
 
     <androidx.recyclerview.widget.RecyclerView

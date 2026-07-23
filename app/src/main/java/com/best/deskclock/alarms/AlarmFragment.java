@@ -31,12 +31,16 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.DisplayMetrics;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
@@ -73,6 +77,7 @@ import com.best.deskclock.dialogfragment.SpinnerTimePickerDialogFragment;
 import com.best.deskclock.events.Events;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.AlarmInstance;
+import com.best.deskclock.provider.Tag;
 import com.best.deskclock.uicomponents.CustomTooltip;
 import com.best.deskclock.uicomponents.EmptyViewController;
 import com.best.deskclock.uicomponents.toast.SnackbarManager;
@@ -90,8 +95,11 @@ import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * A fragment that displays a list of alarm time and allows interaction with them.
@@ -149,6 +157,16 @@ public final class AlarmFragment extends DeskClockFragment
     private long mScrollToAlarmId = Alarm.INVALID_ID;
     private long mCurrentUpdateToken;
     private String mLastSortOrder = null;
+
+    // Search/filter state (lightly persisted in fragment fields; not restored across process death)
+    private List<AlarmItemHolder> mAllItemHolders = new ArrayList<>();
+    private String mSearchQuery = "";
+    private boolean mFilterEnabledOnly = false;
+    private boolean mFilterRepeatingOnly = false;
+    private boolean mFilterOneShotOnly = false;
+    private int mExtraSortMode = 0; // 0=default, 1=ring count desc, 2=created desc, 3=updated desc
+    private long mFilterTagId = Tag.INVALID_ID; // Tag.INVALID_ID means "All tags" (no tag filter)
+    private Set<Long> mFilterTagAlarmIds = null; // ids of alarms having mFilterTagId, or null if no tag filter is active
 
     // Controllers
     private AlarmAdapter mItemAdapter;
@@ -277,8 +295,197 @@ public final class AlarmFragment extends DeskClockFragment
         }
 
         setupFragmentResultListeners();
+        setupFilterBar();
 
         mPrefs.registerOnSharedPreferenceChangeListener(mPrefListener);
+    }
+
+    /**
+     * Wires up the search field, filter chips and extra-sort spinner added above the alarm list.
+     */
+    private void setupFilterBar() {
+        mBinding.alarmSearchEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                mSearchQuery = s == null ? "" : s.toString();
+                applyFilters();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        mBinding.alarmFilterChipEnabled.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            mFilterEnabledOnly = isChecked;
+            applyFilters();
+        });
+
+        mBinding.alarmFilterChipRepeating.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            mFilterRepeatingOnly = isChecked;
+            if (isChecked && mFilterOneShotOnly) {
+                mFilterOneShotOnly = false;
+                mBinding.alarmFilterChipOneShot.setChecked(false);
+            }
+            applyFilters();
+        });
+
+        mBinding.alarmFilterChipOneShot.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            mFilterOneShotOnly = isChecked;
+            if (isChecked && mFilterRepeatingOnly) {
+                mFilterRepeatingOnly = false;
+                mBinding.alarmFilterChipRepeating.setChecked(false);
+            }
+            applyFilters();
+        });
+
+        mBinding.alarmSortSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mExtraSortMode = position;
+                applyFilters();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        setupTagFilterSpinner();
+    }
+
+    /**
+     * Loads every user-defined {@link Tag} in the background and populates
+     * {@code alarmTagSpinner} with "All tags" followed by each tag's name. Selecting a tag
+     * asynchronously looks up the alarms associated with it and filters the list down to those.
+     */
+    private void setupTagFilterSpinner() {
+        final Context context = requireContext();
+        final ContentResolver cr = context.getContentResolver();
+
+        AppExecutors.getDiskIO().execute(() -> {
+            final List<Tag> tags = Tag.getTags(cr);
+
+            AppExecutors.getMainThread().post(() -> {
+                if (mBinding == null) {
+                    return;
+                }
+
+                final List<String> labels = new ArrayList<>();
+                labels.add(getString(R.string.mighty_tag_filter_all));
+                for (Tag tag : tags) {
+                    labels.add(tag.name);
+                }
+
+                final ArrayAdapter<String> adapter =
+                    new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, labels);
+                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                mBinding.alarmTagSpinner.setAdapter(adapter);
+
+                mBinding.alarmTagSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        if (position == 0) {
+                            mFilterTagId = Tag.INVALID_ID;
+                            mFilterTagAlarmIds = null;
+                            applyFilters();
+                        } else {
+                            final Tag selectedTag = tags.get(position - 1);
+                            mFilterTagId = selectedTag.id;
+                            applyTagFilter(selectedTag.id);
+                        }
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+                    }
+                });
+            });
+        });
+    }
+
+    /**
+     * Asynchronously resolves the ids of every alarm associated with {@code tagId} and, once
+     * loaded (provided the selection hasn't changed in the meantime), applies it as a filter.
+     */
+    private void applyTagFilter(long tagId) {
+        final Context context = getContext();
+        if (context == null) {
+            return;
+        }
+        final ContentResolver cr = context.getContentResolver();
+
+        AppExecutors.getDiskIO().execute(() -> {
+            final Set<Long> alarmIds = new HashSet<>(Tag.getAlarmIdsForTag(cr, tagId));
+
+            AppExecutors.getMainThread().post(() -> {
+                if (mBinding == null || mFilterTagId != tagId) {
+                    // The selection changed again while the query was running; ignore this result.
+                    return;
+                }
+                mFilterTagAlarmIds = alarmIds;
+                applyFilters();
+            });
+        });
+    }
+
+    /**
+     * Applies the current search text, filter chip states and extra sort mode (if any) on top of
+     * {@link #mAllItemHolders} and pushes the result to the adapter.
+     */
+    private void applyFilters() {
+        if (mBinding == null) {
+            return;
+        }
+
+        final String query = mSearchQuery == null ? "" : mSearchQuery.trim().toUpperCase(Locale.getDefault());
+        final List<AlarmItemHolder> filtered = new ArrayList<>();
+
+        for (AlarmItemHolder holder : mAllItemHolders) {
+            final Alarm alarm = holder.item;
+
+            if (mFilterEnabledOnly && !alarm.enabled) {
+                continue;
+            }
+            if (mFilterRepeatingOnly && !alarm.daysOfWeek.isRepeating()) {
+                continue;
+            }
+            if (mFilterOneShotOnly && alarm.daysOfWeek.isRepeating()) {
+                continue;
+            }
+            if (mFilterTagAlarmIds != null && !mFilterTagAlarmIds.contains(alarm.id)) {
+                continue;
+            }
+
+            if (!query.isEmpty()) {
+                final String label = alarm.label == null ? "" : alarm.label.toUpperCase(Locale.getDefault());
+                final AlarmInstance instance = holder.getAlarmInstance();
+                final Calendar time = instance != null ? instance.getAlarmTime() : Calendar.getInstance();
+                final String formattedTime =
+                    com.best.deskclock.utils.AlarmUtils.getFormattedTime(requireContext(), time).toString().toUpperCase(Locale.getDefault());
+
+                if (!label.contains(query) && !formattedTime.contains(query)) {
+                    continue;
+                }
+            }
+
+            filtered.add(holder);
+        }
+
+        switch (mExtraSortMode) {
+            case 1 -> filtered.sort((a, b) -> Integer.compare(b.item.ringCount, a.item.ringCount));
+            case 2 -> filtered.sort((a, b) -> Long.compare(b.item.createdAt, a.item.createdAt));
+            case 3 -> filtered.sort((a, b) -> Long.compare(b.item.updatedAt, a.item.updatedAt));
+            default -> {
+                // Keep the order computed in onLoadFinished (respects the user's alarm sort preference).
+            }
+        }
+
+        setAdapterItems(filtered, SystemClock.elapsedRealtime());
     }
 
     @Override
@@ -509,8 +716,10 @@ public final class AlarmFragment extends DeskClockFragment
             });
         }
 
-        // Apply the final list to the adapter
-        setAdapterItems(itemHolders, SystemClock.elapsedRealtime());
+        // Keep the full sorted list around so search/filter/extra-sort can be re-applied without
+        // reloading from the database, then push the filtered result to the adapter.
+        mAllItemHolders = itemHolders;
+        applyFilters();
     }
 
     @Override
