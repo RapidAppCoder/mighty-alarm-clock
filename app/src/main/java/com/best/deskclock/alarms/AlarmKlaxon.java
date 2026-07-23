@@ -17,6 +17,7 @@ import android.os.Vibrator;
 import com.best.deskclock.DeskClockApplication;
 import com.best.deskclock.base.AppExecutors;
 import com.best.deskclock.data.SettingsDAO;
+import com.best.deskclock.mighty.mute.GlobalMuteController;
 import com.best.deskclock.provider.AlarmInstance;
 import com.best.deskclock.ringtone.AsyncRingtonePlayer;
 import com.best.deskclock.ringtone.RingtonePlayer;
@@ -96,7 +97,14 @@ public final class AlarmKlaxon {
         Context appContext = DeskClockApplication.getAppContext();
         SharedPreferences prefs = DeskClockApplication.getDefaultSharedPreferences(appContext);
         AlarmKlaxon instance = getInstance();
-        boolean isRingtoneSilent = RingtoneUtils.RINGTONE_SILENT.equals(alarmInstance.mRingtone);
+
+        final boolean globalMuteActive = GlobalMuteController.isActive(appContext);
+        final GlobalMuteController.Mode globalMuteMode = GlobalMuteController.getMode(appContext);
+        if (globalMuteActive) {
+            LogUtils.v("AlarmKlaxon: global mute is active (mode=%s); ringtone will be skipped", globalMuteMode);
+        }
+
+        boolean isRingtoneSilent = RingtoneUtils.RINGTONE_SILENT.equals(alarmInstance.mRingtone) || globalMuteActive;
 
         if (!isRingtoneSilent) {
             // Crescendo duration always in milliseconds
@@ -125,7 +133,11 @@ public final class AlarmKlaxon {
             }
         }
 
-        if (alarmInstance.mVibrate) {
+        final boolean shouldVibrate = globalMuteActive
+            ? globalMuteMode == GlobalMuteController.Mode.VIBRATE
+            : alarmInstance.mVibrate;
+
+        if (shouldVibrate) {
             long delayInMillis;
 
             if (isRingtoneSilent) {
