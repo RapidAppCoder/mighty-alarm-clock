@@ -1480,4 +1480,8 @@
     <string name="mighty_move_to_exchange_failure">Failed to move alarm to exchange folder</string>
     <string name="mighty_exchange_no_folders_configured">No exchange folders configured. Add one from Mighty features settings.</string>
     <string name="mighty_tag_filter_all">All tags</string>
+    <string name="mighty_backup_interval_6h">Every 6 hours</string>
+    <string name="mighty_backup_interval_12h">Every 12 hours</string>
+    <string name="mighty_backup_interval_24h">Every 24 hours</string>
+    <string name="mighty_backup_interval_48h">Every 48 hours</string>
 </resources>

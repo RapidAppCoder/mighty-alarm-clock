@@ -129,6 +129,7 @@ dependencies {
     implementation 'androidx.media3:media3-common:1.10.1'
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation 'androidx.work:work-runtime:2.10.0'
     implementation 'com.google.android.material:material:1.14.0'
     implementation 'com.github.martin-stone:hsv-alpha-color-picker-android:3.1.0'
 }

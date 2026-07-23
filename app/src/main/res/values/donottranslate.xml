@@ -742,4 +742,19 @@
         <item>@string/mighty_sort_by_created_date</item>
         <item>@string/mighty_sort_by_updated_date</item>
     </string-array>
+
+    <!-- Entries for the JSON backup interval ListPreference -->
+    <string-array name="mighty_backup_interval_entries">
+        <item>@string/mighty_backup_interval_6h</item>
+        <item>@string/mighty_backup_interval_12h</item>
+        <item>@string/mighty_backup_interval_24h</item>
+        <item>@string/mighty_backup_interval_48h</item>
+    </string-array>
+    <!-- Values (in hours) matching mighty_backup_interval_entries above -->
+    <string-array name="mighty_backup_interval_values" translatable="false">
+        <item>6</item>
+        <item>12</item>
+        <item>24</item>
+        <item>48</item>
+    </string-array>
 </resources>
