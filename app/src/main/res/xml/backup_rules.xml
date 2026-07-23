@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    SPDX-License-Identifier: GPL-3.0-only
+
+    Full-backup rules for API 30 and below (android:fullBackupContent).
+    Device-protected domains are required because alarms.db and default
+    SharedPreferences live in Direct Boot / device-protected storage.
+-->
+<full-backup-content>
+    <!-- Device-protected: alarms database, settings, custom media -->
+    <include domain="device_database" path="alarms.db" />
+    <include domain="device_sharedpref" path="." />
+    <include domain="device_file" path="." />
+
+    <!-- Credential-encrypted: Mighty prefs, fire queue, CE-copied ringtones -->
+    <include domain="sharedpref" path="." />
+    <include domain="file" path="." />
+
+    <exclude domain="device_file" path="log_utils_logs.txt" />
+    <exclude domain="file" path="log_utils_logs.txt" />
+</full-backup-content>

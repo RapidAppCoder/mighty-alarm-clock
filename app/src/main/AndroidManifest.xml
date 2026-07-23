@@ -53,7 +53,11 @@
 
     <application
         android:name="com.best.deskclock.DeskClockApplication"
-        android:allowBackup="false"
+        android:allowBackup="true"
+        android:fullBackupOnly="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:backupAgent=".backup.DeskClockBackupAgent"
         android:appCategory="productivity"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -63,7 +67,7 @@
         android:theme="@style/Theme.DeskClock"
         android:localeConfig="@xml/locales_config"
         tools:targetApi="33"
-        tools:ignore="DataExtractionRules, UnusedTranslation">
+        tools:ignore="UnusedTranslation">
 
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"

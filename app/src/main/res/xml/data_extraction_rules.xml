@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    SPDX-License-Identifier: GPL-3.0-only
+
+    Data extraction rules for API 31+ (android:dataExtractionRules).
+    Used by SeedVault / Auto Backup (cloud-backup) and device-to-device transfer.
+    Device-protected domains are required because alarms.db and default
+    SharedPreferences live in Direct Boot / device-protected storage.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="device_database" path="alarms.db" />
+        <include domain="device_sharedpref" path="." />
+        <include domain="device_file" path="." />
+        <include domain="sharedpref" path="." />
+        <include domain="file" path="." />
+
+        <exclude domain="device_file" path="log_utils_logs.txt" />
+        <exclude domain="file" path="log_utils_logs.txt" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="device_database" path="alarms.db" />
+        <include domain="device_sharedpref" path="." />
+        <include domain="device_file" path="." />
+        <include domain="sharedpref" path="." />
+        <include domain="file" path="." />
+
+        <exclude domain="device_file" path="log_utils_logs.txt" />
+        <exclude domain="file" path="log_utils_logs.txt" />
+    </device-transfer>
+</data-extraction-rules>
