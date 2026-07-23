@@ -1436,20 +1436,97 @@
     <!-- Toast message when restore fails -->
     <string name="toast_message_restore_error">Restore failed</string>
 
+    <!-- ******************************* -->
+    <!-- **     MIGHTY ADDITIONS      ** -->
+    <!-- ******************************* -->
+
+    <!-- Title of the dialog shown when creating a brand-new alarm, prompting for a name/label -->
     <string name="mighty_new_alarm_name_title">Name this alarm</string>
+    <!-- Title of the dialog allowing the user to pick an explicit snooze duration (long-press on the snooze button) -->
     <string name="mighty_choose_snooze_duration_title">Snooze for…</string>
+    <!-- Suffix appended to the label of a duplicated alarm -->
     <string name="mighty_copy_suffix">(copy)</string>
+
+    <!-- Hint shown in the alarm list search field -->
     <string name="mighty_search_alarms_hint">Search alarms…</string>
+    <!-- Filter chip label: only show enabled alarms -->
     <string name="mighty_filter_enabled">Enabled</string>
+    <!-- Filter chip label: only show repeating alarms -->
     <string name="mighty_filter_repeating">Repeating</string>
+    <!-- Filter chip label: only show one-shot (non-repeating) alarms -->
     <string name="mighty_filter_one_shot">One-shot</string>
+
+    <!-- Title of the "Mighty features" settings entry -->
+    <string name="mighty_features_title">Mighty features</string>
+    <!-- Summary of the "Mighty features" settings entry -->
+    <string name="mighty_features_summary">Global mute, Wi-Fi rules, backup, exchange, stats and more</string>
+
+    <string name="mighty_category_stats">Statistics</string>
+    <!-- Title of the device statistics preference -->
+    <string name="mighty_device_stats_title">Device statistics</string>
+    <!-- Summary of the device statistics preference. %1$d = ring count, %2$d = snooze count -->
+    <string name="mighty_device_stats_summary">Rung %1$d times, snoozed %2$d times</string>
+    <!-- Message of the device statistics dialog. %1$d = ring count, %2$d = snooze count -->
+    <string name="mighty_device_stats_dialog_message">Total alarm rings: %1$d\nTotal snoozes: %2$d</string>
+    <!-- Button that resets device statistics -->
+    <string name="mighty_reset_stats">Reset</string>
+    <!-- Preference that shares the event log as a CSV-like text -->
+    <string name="mighty_export_event_log">Export event log</string>
+    <string name="mighty_export_event_log_summary">Share the alarm event history as CSV</string>
+
+    <string name="mighty_category_global_mute">Global mute</string>
+    <!-- Title of the global mute preference and dialog -->
+    <string name="mighty_global_mute_title">Global mute</string>
+    <!-- Summary shown when global mute is active. %1$s = time it ends -->
+    <string name="mighty_global_mute_active_summary">Active until %1$s</string>
+    <string name="mighty_global_mute_inactive_summary">Off</string>
+    <string name="mighty_mute_1h_silent">Mute for 1 hour (silent)</string>
+    <string name="mighty_mute_1h_vibrate">Mute for 1 hour (vibrate only)</string>
+    <string name="mighty_mute_2h_silent">Mute for 2 hours (silent)</string>
+    <string name="mighty_mute_2h_vibrate">Mute for 2 hours (vibrate only)</string>
+    <string name="mighty_mute_until_tomorrow_silent">Mute until tomorrow 8 AM (silent)</string>
+    <string name="mighty_mute_until_tomorrow_vibrate">Mute until tomorrow 8 AM (vibrate only)</string>
+    <string name="mighty_mute_disable">Disable global mute</string>
+
+    <string name="mighty_category_wifi_rules">Wi-Fi rules</string>
+    <string name="mighty_wifi_reevaluate_title">Re-check Wi-Fi rules now</string>
+    <string name="mighty_wifi_reevaluate_summary">Applies enable/disable rules based on the currently connected Wi-Fi network</string>
+    <string name="mighty_wifi_reevaluate_toast">Wi-Fi rules re-checked</string>
+
+    <string name="mighty_category_backup">JSON backup</string>
+    <string name="mighty_backup_folder_title">Backup folder</string>
+    <string name="mighty_backup_folder_not_set">Not set</string>
+    <string name="mighty_backup_schedule_enabled_title">Automatic backup</string>
+    <string name="mighty_backup_interval_title">Backup interval</string>
+    <string name="mighty_backup_now_title">Back up now</string>
+    <string name="mighty_backup_now_success">Backup completed</string>
+    <string name="mighty_backup_now_failure">Backup failed; check that a folder is selected</string>
+
+    <string name="mighty_category_exchange">Exchange</string>
+    <string name="mighty_exchange_add_folder_title">Add exchange folder</string>
+    <string name="mighty_exchange_folder_name_hint">Folder name</string>
+    <string name="mighty_exchange_folders_title">Configured folders</string>
+    <!-- Summary showing the number of configured exchange folders. %1$d = count -->
+    <string name="mighty_exchange_folders_summary">%1$d folder(s)</string>
+    <string name="mighty_exchange_scan_now_title">Scan now</string>
+    <string name="mighty_exchange_inbox_title">Inbox</string>
+    <!-- Summary showing the number of pending exchange imports. %1$d = count -->
+    <string name="mighty_exchange_inbox_summary">%1$d pending</string>
+    <string name="mighty_exchange_inbox_empty">Inbox is empty</string>
+    <!-- Message of the exchange inbox review dialog. %1$s = folder name, %2$s = raw alarm JSON -->
+    <string name="mighty_exchange_inbox_item_message">From folder \"%1$s\":\n\n%2$s</string>
     <string name="mighty_accept">Accept</string>
     <string name="mighty_reject">Reject</string>
+
+    <string name="mighty_category_clock">Clock</string>
+    <string name="mighty_category_tags">Tags</string>
     <string name="mighty_tags_section_title">Tags</string>
     <string name="mighty_tags_edit_button">Assign tags</string>
     <string name="mighty_tags_none">No tags</string>
     <string name="mighty_tags_assign_title">Assign tags</string>
     <string name="mighty_tags_create_first">Create tags first under Settings → Mighty features</string>
+    <string name="mighty_manage_tags_title">Manage tags</string>
+    <string name="mighty_manage_tags_summary">Create or delete alarm tags</string>
     <string name="mighty_tags_add_title">New tag</string>
     <string name="mighty_tags_add_hint">Tag name</string>
     <string name="mighty_tags_empty">No tags yet. Tap Add to create one.</string>
@@ -1457,14 +1534,27 @@
     <string name="mighty_tags_created">Tag created</string>
     <string name="mighty_tags_add">Add</string>
     <string name="mighty_tags_delete">Delete</string>
+    <string name="mighty_display_timezone_globe_title">Show timezone globe</string>
+
+    <!-- Extra alarm sort spinner options -->
     <string name="mighty_sort_by_ring_count">Sort: ring count</string>
     <string name="mighty_sort_by_created_date">Sort: date created</string>
     <string name="mighty_sort_by_updated_date">Sort: date updated</string>
+
+    <!-- JSON backup interval options -->
+    <string name="mighty_backup_interval_6h">Every 6 hours</string>
+    <string name="mighty_backup_interval_12h">Every 12 hours</string>
+    <string name="mighty_backup_interval_24h">Every 24 hours</string>
+    <string name="mighty_backup_interval_48h">Every 48 hours</string>
+
+    <!-- Alarm edit bottom sheet: snooze extension section -->
     <string name="mighty_snooze_extend_title">Snooze extension</string>
     <string name="mighty_snooze_extend_enabled_title">Extend snooze each time</string>
     <string name="mighty_snooze_extend_minutes_label">Extend by</string>
     <string name="mighty_snooze_extend_max_minutes_label">Maximum extension</string>
     <string name="mighty_snooze_extend_no_max">No limit</string>
+
+    <!-- Alarm edit bottom sheet: Wi-Fi rule section -->
     <string name="mighty_wifi_rule_title">Wi-Fi rule</string>
     <string name="mighty_wifi_rule_enabled_title">Enable Wi-Fi rule for this alarm</string>
     <string name="mighty_wifi_ssid_hint">Wi-Fi network name (SSID)</string>
@@ -1474,14 +1564,15 @@
     <string name="mighty_wifi_action_label">Then</string>
     <string name="mighty_wifi_action_enable">Enable alarm</string>
     <string name="mighty_wifi_action_disable">Disable alarm</string>
+
+    <!-- Alarm edit bottom sheet: move to exchange section -->
     <string name="mighty_move_to_exchange_button">Move to exchange…</string>
     <string name="mighty_move_to_exchange_title">Choose exchange folder</string>
     <string name="mighty_move_to_exchange_success">Alarm moved to exchange folder</string>
     <string name="mighty_move_to_exchange_failure">Failed to move alarm to exchange folder</string>
     <string name="mighty_exchange_no_folders_configured">No exchange folders configured. Add one from Mighty features settings.</string>
+
+    <!-- Alarm list: tag filter -->
     <string name="mighty_tag_filter_all">All tags</string>
-    <string name="mighty_backup_interval_6h">Every 6 hours</string>
-    <string name="mighty_backup_interval_12h">Every 12 hours</string>
-    <string name="mighty_backup_interval_24h">Every 24 hours</string>
-    <string name="mighty_backup_interval_48h">Every 48 hours</string>
+
 </resources>

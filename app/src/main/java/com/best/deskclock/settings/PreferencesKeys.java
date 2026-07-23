@@ -339,6 +339,26 @@ public class PreferencesKeys {
     public static final String KEY_NEXT_ALARM_WIDGET_CUSTOM_ALARM_COLOR = "key_next_alarm_widget_custom_alarm_color";
     public static final String KEY_NEXT_ALARM_WIDGET_MAXIMUM_FONT_SIZE = "key_next_alarm_widget_maximum_font_size";
 
+    // ********************
+    // ** MIGHTY FEATURES **
+    // ********************
+
+    public static final String KEY_MIGHTY_FEATURES = "key_mighty_features";
+    public static final String KEY_MIGHTY_DEVICE_STATS = "key_mighty_device_stats";
+    public static final String KEY_MIGHTY_EXPORT_EVENT_LOG = "key_mighty_export_event_log";
+    public static final String KEY_MIGHTY_GLOBAL_MUTE = "key_mighty_global_mute";
+    public static final String KEY_MIGHTY_WIFI_REEVALUATE = "key_mighty_wifi_reevaluate";
+    public static final String KEY_MIGHTY_BACKUP_FOLDER = "key_mighty_backup_folder";
+    public static final String KEY_MIGHTY_BACKUP_SCHEDULE_ENABLED = "key_mighty_backup_schedule_enabled";
+    public static final String KEY_MIGHTY_BACKUP_INTERVAL_HOURS = "key_mighty_backup_interval_hours";
+    public static final String KEY_MIGHTY_BACKUP_NOW = "key_mighty_backup_now";
+    public static final String KEY_MIGHTY_EXCHANGE_ADD_FOLDER = "key_mighty_exchange_add_folder";
+    public static final String KEY_MIGHTY_EXCHANGE_FOLDERS = "key_mighty_exchange_folders";
+    public static final String KEY_MIGHTY_EXCHANGE_SCAN_NOW = "key_mighty_exchange_scan_now";
+    public static final String KEY_MIGHTY_EXCHANGE_INBOX = "key_mighty_exchange_inbox";
+    public static final String KEY_MIGHTY_MANAGE_TAGS = "key_mighty_manage_tags";
+    public static final String KEY_DISPLAY_TIMEZONE_GLOBE = "key_display_timezone_globe";
+
     // ****************
     // ** FILE NAMES **
     // ****************

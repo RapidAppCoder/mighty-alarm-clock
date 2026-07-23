@@ -88,4 +88,12 @@
         android:icon="@drawable/ic_backup_restore"
         app:singleLineTitle="false" />
 
+    <Preference
+        android:key="key_mighty_features"
+        android:layout="@layout/settings_preference_layout"
+        android:title="@string/mighty_features_title"
+        android:summary="@string/mighty_features_summary"
+        android:icon="@drawable/ic_widget"
+        app:singleLineTitle="false" />
+
 </PreferenceScreen>

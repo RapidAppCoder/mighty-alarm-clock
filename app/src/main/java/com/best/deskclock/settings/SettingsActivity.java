@@ -134,6 +134,7 @@ public final class SettingsActivity extends CollapsingToolbarBaseActivity {
         Preference mPermissionsManagement;
         Preference mPermissionMessage;
         Preference mBackupRestorePref;
+        Preference mMightyFeaturesPref;
 
         private AlertDialog mRestartDialog;
 
@@ -249,6 +250,7 @@ public final class SettingsActivity extends CollapsingToolbarBaseActivity {
             mPermissionsManagement = findPreference(KEY_PERMISSIONS_MANAGEMENT);
             mPermissionMessage = findPreference(KEY_PERMISSION_MESSAGE);
             mBackupRestorePref = findPreference(KEY_BACKUP_RESTORE_PREFERENCES);
+            mMightyFeaturesPref = findPreference(KEY_MIGHTY_FEATURES);
 
             if (savedInstanceState != null) {
                 mShowBackupRestoreDialog = savedInstanceState.getBoolean(KEY_SHOW_BACKUP_RESTORE_DIALOG, false);
@@ -317,7 +319,7 @@ public final class SettingsActivity extends CollapsingToolbarBaseActivity {
         public void onDestroy() {
             nullifyPreferenceListeners(mInterfaceCustomizationPref, mClockSettingsPref, mAlarmSettingsPref, mTimerSettingsPref,
                 mStopwatchSettingsPref, mScreensaverSettings, mWidgetsSettings, mPermissionsManagement, mPermissionMessage,
-                mBackupRestorePref);
+                mBackupRestorePref, mMightyFeaturesPref);
 
             nullifyAllPrefs();
 
@@ -345,6 +347,8 @@ public final class SettingsActivity extends CollapsingToolbarBaseActivity {
                     animateAndShowFragment(new PermissionsManagementActivity.PermissionsManagementFragment());
 
                 case KEY_BACKUP_RESTORE_PREFERENCES -> showBackupRestoreDialog();
+
+                case KEY_MIGHTY_FEATURES -> animateAndShowFragment(new MightyFeaturesFragment());
             }
 
             return true;
@@ -370,6 +374,8 @@ public final class SettingsActivity extends CollapsingToolbarBaseActivity {
             mPermissionsManagement.setOnPreferenceClickListener(this);
 
             mBackupRestorePref.setOnPreferenceClickListener(this);
+
+            mMightyFeaturesPref.setOnPreferenceClickListener(this);
         }
 
         private void updateSettingsVisibility() {
@@ -577,6 +583,7 @@ public final class SettingsActivity extends CollapsingToolbarBaseActivity {
             mPermissionsManagement = null;
             mPermissionMessage = null;
             mBackupRestorePref = null;
+            mMightyFeaturesPref = null;
         }
     }
 

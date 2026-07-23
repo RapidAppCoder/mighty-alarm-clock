@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    SPDX-License-Identifier: GPL-3.0-only
+-->
+
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:title="@string/mighty_category_stats"
+        app:iconSpaceReserved="false">
+
+        <Preference
+            android:key="key_mighty_device_stats"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_device_stats_title"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+        <Preference
+            android:key="key_mighty_export_event_log"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_export_event_log"
+            android:summary="@string/mighty_export_event_log_summary"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/mighty_category_global_mute"
+        app:iconSpaceReserved="false">
+
+        <Preference
+            android:key="key_mighty_global_mute"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_global_mute_title"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/mighty_category_wifi_rules"
+        app:iconSpaceReserved="false">
+
+        <Preference
+            android:key="key_mighty_wifi_reevaluate"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_wifi_reevaluate_title"
+            android:summary="@string/mighty_wifi_reevaluate_summary"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/mighty_category_backup"
+        app:iconSpaceReserved="false">
+
+        <Preference
+            android:key="key_mighty_backup_folder"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_backup_folder_title"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+        <SwitchPreferenceCompat
+            android:key="key_mighty_backup_schedule_enabled"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_backup_schedule_enabled_title"
+            android:defaultValue="false"
+            app:persistent="false"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+        <ListPreference
+            android:key="key_mighty_backup_interval_hours"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_backup_interval_title"
+            android:entries="@array/mighty_backup_interval_entries"
+            android:entryValues="@array/mighty_backup_interval_values"
+            android:defaultValue="24"
+            app:persistent="false"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+        <Preference
+            android:key="key_mighty_backup_now"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_backup_now_title"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/mighty_category_exchange"
+        app:iconSpaceReserved="false">
+
+        <Preference
+            android:key="key_mighty_exchange_add_folder"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_exchange_add_folder_title"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+        <Preference
+            android:key="key_mighty_exchange_folders"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_exchange_folders_title"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+        <Preference
+            android:key="key_mighty_exchange_scan_now"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_exchange_scan_now_title"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+        <Preference
+            android:key="key_mighty_exchange_inbox"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_exchange_inbox_title"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/mighty_category_tags"
+        app:iconSpaceReserved="false">
+
+        <Preference
+            android:key="key_mighty_manage_tags"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_manage_tags_title"
+            android:summary="@string/mighty_manage_tags_summary"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/mighty_category_clock"
+        app:iconSpaceReserved="false">
+
+        <SwitchPreferenceCompat
+            android:key="key_display_timezone_globe"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_display_timezone_globe_title"
+            android:defaultValue="false"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
