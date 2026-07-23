@@ -20,7 +20,6 @@ import static com.best.deskclock.settings.PreferencesDefaultValues.TAB_ANIMATION
 import static com.best.deskclock.settings.PreferencesDefaultValues.TAB_ANIMATION_GATE;
 import static com.best.deskclock.settings.PreferencesDefaultValues.TAB_ANIMATION_ZOOM_OUT;
 import static com.best.deskclock.settings.PreferencesDefaultValues.TAB_TITLE_VISIBILITY_NEVER;
-import static com.best.deskclock.settings.PreferencesKeys.KEY_DISPLAY_KEEP_ANDROID_OPEN_DIALOG;
 import static com.best.deskclock.settings.PreferencesKeys.KEY_ESSENTIAL_PERMISSIONS_GRANTED;
 import static com.best.deskclock.settings.PreferencesKeys.KEY_IS_FIRST_LAUNCH;
 import static com.best.deskclock.settings.PreferencesKeys.KEY_KEEP_SCREEN_ON;
@@ -51,7 +50,6 @@ import android.view.MenuItem;
 import android.view.View;
 
 import androidx.annotation.StringRes;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
@@ -117,8 +115,6 @@ public class DeskClock extends BaseActivity implements FabContainer {
     private Typeface mRegularTypeface;
     private String mFontPath;
     private boolean mIsToolBarDisplayed;
-
-    private AlertDialog mKeepAndroidOpenDialog = null;
 
     /**
      * Shrinks the FAB, left FAB and right FAB to nothing.
@@ -244,8 +240,6 @@ public class DeskClock extends BaseActivity implements FabContainer {
 
         configureFabAndButtons();
 
-        displayKeepAndroidOpenDialogIfUnread();
-
         registerPrefListener();
 
         AppExecutors.getDiskIO().execute(() -> {
@@ -329,11 +323,6 @@ public class DeskClock extends BaseActivity implements FabContainer {
     @Override
     protected void onDestroy() {
         unregisterPrefListener();
-
-        if (mKeepAndroidOpenDialog != null && mKeepAndroidOpenDialog.isShowing()) {
-            mKeepAndroidOpenDialog.dismiss();
-            mKeepAndroidOpenDialog = null;
-        }
 
         super.onDestroy();
     }
@@ -426,21 +415,6 @@ public class DeskClock extends BaseActivity implements FabContainer {
             return true;
         }
         return false;
-    }
-
-    /**
-     * Display dialog related to Google's announcement about app development if unread.
-     *
-     * <p>Note: Clicking the "OK" button will no longer display this dialog box.</p>
-     */
-    private void displayKeepAndroidOpenDialogIfUnread() {
-        if (!mPrefs.getBoolean(KEY_DISPLAY_KEEP_ANDROID_OPEN_DIALOG, true)) {
-            return;
-        }
-
-        mKeepAndroidOpenDialog = Utils.displayKeepAndroidOpenDialog(this, mPrefs, false);
-
-        mKeepAndroidOpenDialog.show();
     }
 
     /**
