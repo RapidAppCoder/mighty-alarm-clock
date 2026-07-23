@@ -655,4 +655,139 @@
     <string name="single_timer_mode_title">Modus für Einzel-Timer</string>
     <string name="single_timer_mode_summary">Nur einen Timer behalten, der beim Reset automatisch gelöscht wird</string>
     <string name="single_timer_mode_warning_message">Die Timer werden gelöscht.%s</string>
+
+    <!-- ******************************* -->
+    <!-- **     MIGHTY ADDITIONS      ** -->
+    <!-- ******************************* -->
+
+    <string name="mighty_new_alarm_name_title">Namen für diesen Wecker</string>
+    <string name="mighty_choose_snooze_duration_title">Schlummern für…</string>
+    <string name="mighty_copy_suffix">(Kopie)</string>
+
+    <string name="mighty_search_alarms_hint">Wecker suchen…</string>
+    <string name="mighty_filter_enabled">Aktiv</string>
+    <string name="mighty_filter_repeating">Wiederholend</string>
+    <string name="mighty_filter_one_shot">Einmalig</string>
+
+    <string name="mighty_features_title">Mighty-Funktionen</string>
+    <string name="mighty_features_summary">Globaler Stummmodus, WLAN-Regeln, Backup, Austausch, Statistiken und mehr</string>
+
+    <string name="mighty_category_stats">Statistiken</string>
+    <string name="mighty_device_stats_title">Gerätestatistik</string>
+    <string name="mighty_device_stats_summary">%1$d Mal geklingelt, %2$d Mal geschlummert</string>
+    <string name="mighty_device_stats_dialog_message">Weckerklingeln gesamt: %1$d\nSchlummern gesamt: %2$d</string>
+    <string name="mighty_reset_stats">Zurücksetzen</string>
+    <string name="mighty_export_event_log">Ereignisprotokoll exportieren</string>
+    <string name="mighty_export_event_log_summary">Wecker-Ereignisverlauf als CSV teilen</string>
+
+    <string name="mighty_category_global_mute">Globaler Stummmodus</string>
+    <string name="mighty_global_mute_title">Globaler Stummmodus</string>
+    <string name="mighty_global_mute_active_summary">Aktiv bis %1$s</string>
+    <string name="mighty_global_mute_inactive_summary">Aus</string>
+    <string name="mighty_mute_1h_silent">1 Stunde stumm (lautlos)</string>
+    <string name="mighty_mute_1h_vibrate">1 Stunde stumm (nur vibrieren)</string>
+    <string name="mighty_mute_2h_silent">2 Stunden stumm (lautlos)</string>
+    <string name="mighty_mute_2h_vibrate">2 Stunden stumm (nur vibrieren)</string>
+    <string name="mighty_mute_until_tomorrow_silent">Bis morgen 8 Uhr stumm (lautlos)</string>
+    <string name="mighty_mute_until_tomorrow_vibrate">Bis morgen 8 Uhr stumm (nur vibrieren)</string>
+    <string name="mighty_mute_disable">Globalen Stummmodus beenden</string>
+
+    <string name="mighty_category_wifi_rules">WLAN-Regeln</string>
+    <string name="mighty_wifi_reevaluate_title">WLAN-Regeln jetzt prüfen</string>
+    <string name="mighty_wifi_reevaluate_summary">Wendet Aktivieren-/Deaktivieren-Regeln anhand des verbundenen WLAN an</string>
+    <string name="mighty_wifi_reevaluate_toast">WLAN-Regeln geprüft</string>
+
+    <string name="mighty_category_backup">JSON-Backup</string>
+    <string name="mighty_backup_folder_title">Backup-Ordner</string>
+    <string name="mighty_backup_folder_not_set">Nicht festgelegt</string>
+    <string name="mighty_backup_schedule_enabled_title">Automatisches Backup</string>
+    <string name="mighty_backup_interval_title">Backup-Intervall</string>
+    <string name="mighty_backup_now_title">Jetzt sichern</string>
+    <string name="mighty_backup_now_success">Backup abgeschlossen</string>
+    <string name="mighty_backup_now_failure">Backup fehlgeschlagen; prüfen Sie, ob ein Ordner gewählt ist</string>
+
+    <string name="mighty_category_exchange">Austausch</string>
+    <string name="mighty_exchange_add_folder_title">Austauschordner hinzufügen</string>
+    <string name="mighty_exchange_folder_name_hint">Ordnername</string>
+    <string name="mighty_exchange_folders_title">Konfigurierte Ordner</string>
+    <string name="mighty_exchange_folders_summary">%1$d Ordner</string>
+    <string name="mighty_exchange_scan_now_title">Jetzt scannen</string>
+    <string name="mighty_exchange_inbox_title">Posteingang</string>
+    <string name="mighty_exchange_inbox_summary">%1$d ausstehend</string>
+    <string name="mighty_exchange_inbox_empty">Posteingang ist leer</string>
+    <string name="mighty_exchange_inbox_item_message">Aus Ordner „%1$s“:\n\n%2$s</string>
+    <string name="mighty_accept">Annehmen</string>
+    <string name="mighty_reject">Ablehnen</string>
+
+    <string name="mighty_category_clock">Uhr</string>
+    <string name="mighty_category_tags">Tags</string>
+    <string name="mighty_tags_section_title">Tags</string>
+    <string name="mighty_tags_edit_button">Tags zuweisen</string>
+    <string name="mighty_tags_none">Keine Tags</string>
+    <string name="mighty_tags_assign_title">Tags zuweisen</string>
+    <string name="mighty_tags_create_first">Legen Sie zuerst Tags unter Einstellungen → Mighty-Funktionen an</string>
+    <string name="mighty_manage_tags_title">Tags verwalten</string>
+    <string name="mighty_manage_tags_summary">Wecker-Tags erstellen oder löschen</string>
+    <string name="mighty_tags_add_title">Neues Tag</string>
+    <string name="mighty_tags_add_hint">Tag-Name</string>
+    <string name="mighty_tags_empty">Noch keine Tags. Tippen Sie auf Hinzufügen.</string>
+    <string name="mighty_tags_deleted">Tag gelöscht</string>
+    <string name="mighty_tags_created">Tag erstellt</string>
+    <string name="mighty_tags_add">Hinzufügen</string>
+    <string name="mighty_tags_delete">Löschen</string>
+    <string name="mighty_display_timezone_globe_title">Zeitzonen-Globus anzeigen</string>
+
+    <string name="mighty_sort_by_ring_count">Sortieren: Klingelanzahl</string>
+    <string name="mighty_sort_by_created_date">Sortieren: Erstellungsdatum</string>
+    <string name="mighty_sort_by_updated_date">Sortieren: Änderungsdatum</string>
+
+    <string name="mighty_backup_interval_6h">Alle 6 Stunden</string>
+    <string name="mighty_backup_interval_12h">Alle 12 Stunden</string>
+    <string name="mighty_backup_interval_24h">Alle 24 Stunden</string>
+    <string name="mighty_backup_interval_48h">Alle 48 Stunden</string>
+
+    <string name="mighty_snooze_extend_title">Schlummer-Verlängerung</string>
+    <string name="mighty_snooze_extend_enabled_title">Schlummer jedes Mal verlängern</string>
+    <string name="mighty_snooze_extend_minutes_label">Verlängern um</string>
+    <string name="mighty_snooze_extend_max_minutes_label">Maximale Verlängerung</string>
+    <string name="mighty_snooze_extend_no_max">Kein Limit</string>
+
+    <string name="mighty_wifi_rule_title">WLAN-Regel</string>
+    <string name="mighty_wifi_rule_enabled_title">WLAN-Regel für diesen Wecker aktivieren</string>
+    <string name="mighty_wifi_ssid_hint">WLAN-Name (SSID)</string>
+    <string name="mighty_wifi_condition_label">Wenn Netzwerk</string>
+    <string name="mighty_wifi_condition_present">Vorhanden</string>
+    <string name="mighty_wifi_condition_absent">Nicht vorhanden</string>
+    <string name="mighty_wifi_action_label">Dann</string>
+    <string name="mighty_wifi_action_enable">Wecker aktivieren</string>
+    <string name="mighty_wifi_action_disable">Wecker deaktivieren</string>
+
+    <string name="mighty_move_to_exchange_button">In Austausch verschieben…</string>
+    <string name="mighty_move_to_exchange_title">Austauschordner wählen</string>
+    <string name="mighty_move_to_exchange_success">Wecker in Austauschordner verschoben</string>
+    <string name="mighty_move_to_exchange_failure">Verschieben in Austauschordner fehlgeschlagen</string>
+    <string name="mighty_exchange_no_folders_configured">Keine Austauschordner konfiguriert. Fügen Sie einen unter Mighty-Funktionen hinzu.</string>
+
+    <string name="mighty_tag_filter_all">Alle Tags</string>
+    <string name="mighty_tag_filter_untagged">Ohne Tag</string>
+
+    <string name="mighty_interval_repeat_title">Intervall-Wiederholung</string>
+    <string name="mighty_interval_repeat_enabled">In Intervallen wiederholen</string>
+    <string name="mighty_interval_value_label">Intervall</string>
+    <string name="mighty_interval_unit_minutes">Minuten</string>
+    <string name="mighty_interval_unit_hours">Stunden</string>
+    <string name="mighty_interval_max_count_label">Maximale Wiederholungen</string>
+    <string name="mighty_interval_max_unlimited">Unbegrenzt</string>
+    <string name="mighty_interval_summary_minutes">Alle %1$d Min</string>
+    <string name="mighty_interval_summary_hours">Alle %1$d Std</string>
+    <string name="mighty_interval_summary_with_max">%1$s · max. %2$d×</string>
+
+    <string name="mighty_sample_tag_work">Arbeit</string>
+    <string name="mighty_sample_tag_home">Zuhause</string>
+    <string name="mighty_sample_alarm_weekdays">Werktags aufstehen (Beispiel)</string>
+    <string name="mighty_sample_alarm_oneshot">Einmaliger Wochenende-Wecker (Beispiel)</string>
+    <string name="mighty_sample_alarm_work_tag">Arbeit – mit Tag (Beispiel)</string>
+    <string name="mighty_sample_alarm_wifi">Zuhause-WLAN (Beispiel)</string>
+    <string name="mighty_sample_alarm_snooze_extend">Schlummer verlängern (Beispiel)</string>
+    <string name="mighty_sample_alarm_interval">Intervall alle 30 Min, max. 3× (Beispiel)</string>
 </resources>
