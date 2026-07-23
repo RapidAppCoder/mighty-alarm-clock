@@ -34,6 +34,16 @@
         android:name="android.permission.ACCESS_NETWORK_STATE"
         tools:node="remove" />
 
+    <!-- Used by the Wi-Fi alarm rules feature to read the currently connected SSID. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Needed on older API levels to read the SSID of the connected Wi-Fi network. -->
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="28"
+        tools:ignore="CoarseFineLocation" />
+    <!-- Needed on API 27+ to read the SSID of the connected Wi-Fi network for per-alarm Wi-Fi rules. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
