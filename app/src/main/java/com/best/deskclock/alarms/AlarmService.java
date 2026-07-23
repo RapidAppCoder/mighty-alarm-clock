@@ -34,9 +34,13 @@ import androidx.annotation.NonNull;
 
 import com.best.deskclock.R;
 import com.best.deskclock.base.AlarmAlertWakeLock;
+import com.best.deskclock.base.AppExecutors;
 import com.best.deskclock.data.SettingsDAO;
 import com.best.deskclock.events.Events;
+import com.best.deskclock.mighty.stats.DeviceStats;
+import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.AlarmInstance;
+import com.best.deskclock.provider.EventLogStore;
 import com.best.deskclock.utils.DeviceUtils;
 import com.best.deskclock.utils.LogUtils;
 import com.best.deskclock.utils.SdkUtils;
@@ -406,7 +410,9 @@ public class AlarmService extends Service {
                     break;
                 }
                 stopCurrentAlarm();
-                stopSelf();
+                if (!startNextQueuedAlarmIfAny()) {
+                    stopSelf();
+                }
             }
             case STOP_ALARM_WITH_DOUBLE_VIBRATION_ACTION -> {
                 if (mCurrentAlarm != null && mCurrentAlarm.mId != instanceId) {
@@ -415,7 +421,9 @@ public class AlarmService extends Service {
                     break;
                 }
                 performDoubleVibration();
-                stopSelf();
+                if (!startNextQueuedAlarmIfAny()) {
+                    stopSelf();
+                }
             }
             case STOP_ALARM_WITH_SINGLE_VIBRATION_ACTION -> {
                 if (mCurrentAlarm != null && mCurrentAlarm.mId != instanceId) {
@@ -424,7 +432,9 @@ public class AlarmService extends Service {
                     break;
                 }
                 performSingleVibration();
-                stopSelf();
+                if (!startNextQueuedAlarmIfAny()) {
+                    stopSelf();
+                }
             }
         }
 
@@ -454,13 +464,22 @@ public class AlarmService extends Service {
     private void startAlarm(AlarmInstance instance) {
         LogUtils.v("AlarmService.start with instance: " + instance.mId);
         if (mCurrentAlarm != null) {
-            AlarmStateManager.setMissedState(this, mCurrentAlarm);
-            stopCurrentAlarm();
+            // Another alarm is already being presented. Rather than tearing it down and marking
+            // it missed, keep it ringing and queue this newly fired instance so it is presented
+            // as soon as the current one is dismissed or snoozed.
+            LogUtils.i("Alarm already firing (instance %d); queueing instance %d instead of marking it missed",
+                mCurrentAlarm.mId, instance.mId);
+            AlarmFireQueue.enqueue(this, instance.mId);
+            EventLogStore.logEvent(getContentResolver(), EventLogStore.EVENT_ALARM_FIRED, null, instance.mLabel,
+                "queued behind instance " + mCurrentAlarm.mId + "; queue size=" + AlarmFireQueue.size(this));
+            return;
         }
 
         AlarmAlertWakeLock.acquireCpuWakeLock(this);
 
         mCurrentAlarm = instance;
+
+        incrementRingCountAsync(instance);
 
         AlarmNotifications.showAlarmNotification(this, mCurrentAlarm);
         AlarmKlaxon.start(mCurrentAlarm);
@@ -491,6 +510,60 @@ public class AlarmService extends Service {
         }
 
         cleanupAndStop();
+    }
+
+    /**
+     * Dequeues and starts the next queued alarm instance, if any, becoming the new
+     * {@link #mCurrentAlarm}. Stale queued instances (no longer in {@link AlarmInstance#FIRED_STATE})
+     * are skipped.
+     *
+     * @return {@code true} if a queued instance was found and started.
+     */
+    private boolean startNextQueuedAlarmIfAny() {
+        Long nextId = AlarmFireQueue.dequeue(this);
+        while (nextId != null) {
+            AlarmInstance next = AlarmInstance.getInstance(getContentResolver(), nextId);
+            if (next != null && next.mAlarmState == AlarmInstance.FIRED_STATE) {
+                LogUtils.i("Starting queued alarm instance %d (%d remaining in queue)", nextId, AlarmFireQueue.size(this));
+                EventLogStore.logEvent(getContentResolver(), EventLogStore.EVENT_ALARM_FIRED, null, next.mLabel,
+                    "started from fire queue");
+                startAlarm(next);
+                return true;
+            }
+            LogUtils.i("Queued instance %d is no longer firing; skipping", nextId);
+            nextId = AlarmFireQueue.dequeue(this);
+        }
+        return false;
+    }
+
+    /**
+     * Increments the ring count of the alarm backing the given instance, on a background thread.
+     */
+    private void incrementRingCountAsync(AlarmInstance instance) {
+        if (instance.mAlarmId == null) {
+            return;
+        }
+
+        final ContentResolver cr = getContentResolver();
+        final long alarmId = instance.mAlarmId;
+        final Context appContext = getApplicationContext();
+
+        AppExecutors.getDiskIO().execute(() -> {
+            try {
+                Alarm alarm = Alarm.getAlarm(cr, alarmId);
+                if (alarm != null) {
+                    alarm.ringCount++;
+                    alarm.updateAlarm(cr);
+
+                    EventLogStore.logEvent(cr, EventLogStore.EVENT_ALARM_FIRED, alarm.stableUuid, alarm.label,
+                        "presented; ringCount=" + alarm.ringCount);
+
+                    DeviceStats.onAlarmFired(appContext);
+                }
+            } catch (Exception e) {
+                LogUtils.e("AlarmService: failed to increment ring count for alarm " + alarmId, e);
+            }
+        });
     }
 
     private void performSingleVibration() {
