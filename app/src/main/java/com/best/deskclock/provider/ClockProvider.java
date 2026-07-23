@@ -9,7 +9,10 @@ package com.best.deskclock.provider;
 import static com.best.deskclock.provider.ClockContract.AlarmsColumns;
 import static com.best.deskclock.provider.ClockContract.InstancesColumns;
 import static com.best.deskclock.provider.ClockDatabaseHelper.ALARMS_TABLE_NAME;
+import static com.best.deskclock.provider.ClockDatabaseHelper.ALARM_TAGS_TABLE_NAME;
+import static com.best.deskclock.provider.ClockDatabaseHelper.EVENT_LOG_TABLE_NAME;
 import static com.best.deskclock.provider.ClockDatabaseHelper.INSTANCES_TABLE_NAME;
+import static com.best.deskclock.provider.ClockDatabaseHelper.TAGS_TABLE_NAME;
 
 import android.content.ContentProvider;
 import android.content.ContentResolver;
@@ -39,6 +42,11 @@ public class ClockProvider extends ContentProvider {
     private static final int INSTANCES = 3;
     private static final int INSTANCES_ID = 4;
     private static final int ALARMS_WITH_INSTANCES = 5;
+    private static final int TAGS = 6;
+    private static final int TAGS_ID = 7;
+    private static final int ALARM_TAGS = 8;
+    private static final int EVENT_LOG = 9;
+    private static final int EVENT_LOG_ID = 10;
     /**
      * Projection map used by query for snoozed alarms.
      */
@@ -105,6 +113,28 @@ public class ClockProvider extends ContentProvider {
             ALARMS_TABLE_NAME + "." + AlarmsColumns.PAUSE_START_DATE);
         sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.PAUSE_END_DATE,
             ALARMS_TABLE_NAME + "." + AlarmsColumns.PAUSE_END_DATE);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.CREATED_AT,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.CREATED_AT);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.UPDATED_AT,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.UPDATED_AT);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.STABLE_UUID,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.STABLE_UUID);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.RING_COUNT,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.RING_COUNT);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.SNOOZE_EXTEND_ENABLED,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.SNOOZE_EXTEND_ENABLED);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.SNOOZE_EXTEND_MINUTES,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.SNOOZE_EXTEND_MINUTES);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.SNOOZE_EXTEND_MAX_MINUTES,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.SNOOZE_EXTEND_MAX_MINUTES);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.WIFI_RULE_ENABLED,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.WIFI_RULE_ENABLED);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.WIFI_SSID,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.WIFI_SSID);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.WIFI_CONDITION,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.WIFI_CONDITION);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.WIFI_ACTION,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.WIFI_ACTION);
 
         sAlarmsWithInstancesProjection.put(INSTANCES_TABLE_NAME + "." + InstancesColumns.ALARM_STATE,
             INSTANCES_TABLE_NAME + "." + InstancesColumns.ALARM_STATE);
@@ -142,6 +172,8 @@ public class ClockProvider extends ContentProvider {
             INSTANCES_TABLE_NAME + "." + InstancesColumns.CRESCENDO_DURATION);
         sAlarmsWithInstancesProjection.put(INSTANCES_TABLE_NAME + "." + InstancesColumns.ALARM_VOLUME,
             INSTANCES_TABLE_NAME + "." + InstancesColumns.ALARM_VOLUME);
+        sAlarmsWithInstancesProjection.put(INSTANCES_TABLE_NAME + "." + InstancesColumns.SNOOZE_COUNT,
+            INSTANCES_TABLE_NAME + "." + InstancesColumns.SNOOZE_COUNT);
     }
 
     static {
@@ -150,6 +182,11 @@ public class ClockProvider extends ContentProvider {
         sURIMatcher.addURI(ClockContract.AUTHORITY, "instances", INSTANCES);
         sURIMatcher.addURI(ClockContract.AUTHORITY, "instances/#", INSTANCES_ID);
         sURIMatcher.addURI(ClockContract.AUTHORITY, "alarms_with_instances", ALARMS_WITH_INSTANCES);
+        sURIMatcher.addURI(ClockContract.AUTHORITY, "tags", TAGS);
+        sURIMatcher.addURI(ClockContract.AUTHORITY, "tags/#", TAGS_ID);
+        sURIMatcher.addURI(ClockContract.AUTHORITY, "alarm_tags", ALARM_TAGS);
+        sURIMatcher.addURI(ClockContract.AUTHORITY, "event_log", EVENT_LOG);
+        sURIMatcher.addURI(ClockContract.AUTHORITY, "event_log/#", EVENT_LOG_ID);
     }
 
     private ClockDatabaseHelper mOpenHelper;
@@ -208,6 +245,19 @@ public class ClockProvider extends ContentProvider {
                 qb.appendWhere(ALARM_JOIN_INSTANCE_WHERE_STATEMENT);
                 qb.setProjectionMap(sAlarmsWithInstancesProjection);
             }
+            case TAGS -> qb.setTables(TAGS_TABLE_NAME);
+            case TAGS_ID -> {
+                qb.setTables(TAGS_TABLE_NAME);
+                qb.appendWhere(ClockContract.TagsColumns._ID + "=");
+                qb.appendWhere(Objects.requireNonNull(uri.getLastPathSegment()));
+            }
+            case ALARM_TAGS -> qb.setTables(ALARM_TAGS_TABLE_NAME);
+            case EVENT_LOG -> qb.setTables(EVENT_LOG_TABLE_NAME);
+            case EVENT_LOG_ID -> {
+                qb.setTables(EVENT_LOG_TABLE_NAME);
+                qb.appendWhere(ClockContract.EventLogColumns._ID + "=");
+                qb.appendWhere(Objects.requireNonNull(uri.getLastPathSegment()));
+            }
             default -> throw new IllegalArgumentException("Unknown URI " + uri);
         }
 
@@ -230,6 +280,11 @@ public class ClockProvider extends ContentProvider {
             case ALARMS_ID -> "vnd.android.cursor.item/alarms";
             case INSTANCES -> "vnd.android.cursor.dir/instances";
             case INSTANCES_ID -> "vnd.android.cursor.item/instances";
+            case TAGS -> "vnd.android.cursor.dir/tags";
+            case TAGS_ID -> "vnd.android.cursor.item/tags";
+            case ALARM_TAGS -> "vnd.android.cursor.dir/alarm_tags";
+            case EVENT_LOG -> "vnd.android.cursor.dir/event_log";
+            case EVENT_LOG_ID -> "vnd.android.cursor.item/event_log";
             default -> throw new IllegalArgumentException("Unknown URI");
         };
     }
@@ -248,6 +303,14 @@ public class ClockProvider extends ContentProvider {
                 alarmId = uri.getLastPathSegment();
                 count = db.update(INSTANCES_TABLE_NAME, values, InstancesColumns._ID + "=" + alarmId, null);
             }
+            case TAGS_ID -> {
+                alarmId = uri.getLastPathSegment();
+                count = db.update(TAGS_TABLE_NAME, values, ClockContract.TagsColumns._ID + "=" + alarmId, null);
+            }
+            case EVENT_LOG_ID -> {
+                alarmId = uri.getLastPathSegment();
+                count = db.update(EVENT_LOG_TABLE_NAME, values, ClockContract.EventLogColumns._ID + "=" + alarmId, null);
+            }
             default -> throw new UnsupportedOperationException("Cannot update URI: " + uri);
         }
 
@@ -263,6 +326,11 @@ public class ClockProvider extends ContentProvider {
         rowId = switch (sURIMatcher.match(uri)) {
             case ALARMS -> mOpenHelper.fixAlarmInsert(initialValues);
             case INSTANCES -> db.insert(INSTANCES_TABLE_NAME, null, initialValues);
+            case TAGS -> db.insert(TAGS_TABLE_NAME, null, initialValues);
+            // Duplicate alarm/tag associations are silently ignored rather than crashing.
+            case ALARM_TAGS -> db.insertWithOnConflict(ALARM_TAGS_TABLE_NAME, null, initialValues,
+                SQLiteDatabase.CONFLICT_IGNORE);
+            case EVENT_LOG -> db.insert(EVENT_LOG_TABLE_NAME, null, initialValues);
             default -> throw new IllegalArgumentException("Cannot insert from URI: " + uri);
         };
 
@@ -296,6 +364,27 @@ public class ClockProvider extends ContentProvider {
                     where = InstancesColumns._ID + "=" + primaryKey + " AND (" + where + ")";
                 }
                 count = db.delete(INSTANCES_TABLE_NAME, where, whereArgs);
+            }
+            case TAGS -> count = db.delete(TAGS_TABLE_NAME, where, whereArgs);
+            case TAGS_ID -> {
+                primaryKey = uri.getLastPathSegment();
+                if (TextUtils.isEmpty(where)) {
+                    where = ClockContract.TagsColumns._ID + "=" + primaryKey;
+                } else {
+                    where = ClockContract.TagsColumns._ID + "=" + primaryKey + " AND (" + where + ")";
+                }
+                count = db.delete(TAGS_TABLE_NAME, where, whereArgs);
+            }
+            case ALARM_TAGS -> count = db.delete(ALARM_TAGS_TABLE_NAME, where, whereArgs);
+            case EVENT_LOG -> count = db.delete(EVENT_LOG_TABLE_NAME, where, whereArgs);
+            case EVENT_LOG_ID -> {
+                primaryKey = uri.getLastPathSegment();
+                if (TextUtils.isEmpty(where)) {
+                    where = ClockContract.EventLogColumns._ID + "=" + primaryKey;
+                } else {
+                    where = ClockContract.EventLogColumns._ID + "=" + primaryKey + " AND (" + where + ")";
+                }
+                count = db.delete(EVENT_LOG_TABLE_NAME, where, whereArgs);
             }
             default -> throw new IllegalArgumentException("Cannot delete from URI: " + uri);
         }

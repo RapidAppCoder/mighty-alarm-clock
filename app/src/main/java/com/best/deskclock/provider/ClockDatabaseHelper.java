@@ -16,6 +16,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import com.best.deskclock.utils.LogUtils;
 
 import java.util.Calendar;
+import java.util.UUID;
 
 /**
  * Helper class for opening the database from multiple providers.  Also provides
@@ -26,8 +27,11 @@ class ClockDatabaseHelper extends SQLiteOpenHelper {
     static final String DATABASE_NAME = "alarms.db";
     static final String ALARMS_TABLE_NAME = "alarm_templates";
     static final String INSTANCES_TABLE_NAME = "alarm_instances";
+    static final String TAGS_TABLE_NAME = "tags";
+    static final String ALARM_TAGS_TABLE_NAME = "alarm_tags";
+    static final String EVENT_LOG_TABLE_NAME = "event_log";
 
-    private static final int DATABASE_VERSION = 26;
+    private static final int DATABASE_VERSION = 27;
     private static final int MINIMUM_SUPPORTED_VERSION = 15;
 
     public ClockDatabaseHelper(Context context) {
@@ -58,7 +62,20 @@ class ClockDatabaseHelper extends SQLiteOpenHelper {
             ClockContract.AlarmsColumns.ALARM_VOLUME + " INTEGER NOT NULL DEFAULT 5, " +
             ClockContract.AlarmsColumns.MANUAL_SORT_ORDER + " INTEGER NOT NULL DEFAULT 0, " +
             ClockContract.AlarmsColumns.PAUSE_START_DATE + " INTEGER NOT NULL DEFAULT 0, " +
-            ClockContract.AlarmsColumns.PAUSE_END_DATE + " INTEGER NOT NULL DEFAULT 0);");
+            ClockContract.AlarmsColumns.PAUSE_END_DATE + " INTEGER NOT NULL DEFAULT 0, " +
+            ClockContract.AlarmsColumns.CREATED_AT + " INTEGER NOT NULL DEFAULT 0, " +
+            ClockContract.AlarmsColumns.UPDATED_AT + " INTEGER NOT NULL DEFAULT 0, " +
+            ClockContract.AlarmsColumns.STABLE_UUID + " TEXT NOT NULL DEFAULT '', " +
+            ClockContract.AlarmsColumns.RING_COUNT + " INTEGER NOT NULL DEFAULT 0, " +
+            ClockContract.AlarmsColumns.SNOOZE_EXTEND_ENABLED + " INTEGER NOT NULL DEFAULT 0, " +
+            ClockContract.AlarmsColumns.SNOOZE_EXTEND_MINUTES + " INTEGER NOT NULL DEFAULT 5, " +
+            ClockContract.AlarmsColumns.SNOOZE_EXTEND_MAX_MINUTES + " INTEGER NOT NULL DEFAULT 0, " +
+            ClockContract.AlarmsColumns.WIFI_RULE_ENABLED + " INTEGER NOT NULL DEFAULT 0, " +
+            ClockContract.AlarmsColumns.WIFI_SSID + " TEXT NOT NULL DEFAULT '', " +
+            ClockContract.AlarmsColumns.WIFI_CONDITION + " TEXT NOT NULL DEFAULT '" +
+                ClockContract.AlarmsColumns.WIFI_CONDITION_PRESENT + "', " +
+            ClockContract.AlarmsColumns.WIFI_ACTION + " TEXT NOT NULL DEFAULT '" +
+                ClockContract.AlarmsColumns.WIFI_ACTION_ENABLE + "');");
 
         LogUtils.i("Alarms Table created");
     }
@@ -84,6 +101,7 @@ class ClockDatabaseHelper extends SQLiteOpenHelper {
             ClockContract.InstancesColumns.MISSED_ALARM_REPEAT_LIMIT + " INTEGER NOT NULL, " +
             ClockContract.InstancesColumns.CRESCENDO_DURATION + " INTEGER NOT NULL, " +
             ClockContract.InstancesColumns.ALARM_VOLUME + " INTEGER NOT NULL, " +
+            ClockContract.InstancesColumns.SNOOZE_COUNT + " INTEGER NOT NULL DEFAULT 0, " +
             ClockContract.InstancesColumns.ALARM_ID + " INTEGER REFERENCES " +
             ALARMS_TABLE_NAME + "(" + ClockContract.AlarmsColumns._ID + ") " +
             "ON UPDATE CASCADE ON DELETE CASCADE);");
@@ -91,10 +109,50 @@ class ClockDatabaseHelper extends SQLiteOpenHelper {
         LogUtils.i("Instance table created");
     }
 
+    private static void createTagsTable(SQLiteDatabase db, String tagsTableName) {
+        db.execSQL("CREATE TABLE " + tagsTableName + " (" +
+            ClockContract.TagsColumns._ID + " INTEGER PRIMARY KEY, " +
+            ClockContract.TagsColumns.NAME + " TEXT NOT NULL, " +
+            ClockContract.TagsColumns.COLOR + " INTEGER NOT NULL DEFAULT 0, " +
+            ClockContract.TagsColumns.RINGTONE_URI + " TEXT, " +
+            ClockContract.TagsColumns.CREATED_AT + " INTEGER NOT NULL DEFAULT 0, " +
+            ClockContract.TagsColumns.UPDATED_AT + " INTEGER NOT NULL DEFAULT 0);");
+
+        LogUtils.i("Tags table created");
+    }
+
+    private static void createAlarmTagsTable(SQLiteDatabase db, String alarmTagsTableName,
+                                             String alarmsTableName, String tagsTableName) {
+        db.execSQL("CREATE TABLE " + alarmTagsTableName + " (" +
+            ClockContract.AlarmTagsColumns.ALARM_ID + " INTEGER NOT NULL REFERENCES " +
+            alarmsTableName + "(" + ClockContract.AlarmsColumns._ID + ") ON UPDATE CASCADE ON DELETE CASCADE, " +
+            ClockContract.AlarmTagsColumns.TAG_ID + " INTEGER NOT NULL REFERENCES " +
+            tagsTableName + "(" + ClockContract.TagsColumns._ID + ") ON UPDATE CASCADE ON DELETE CASCADE, " +
+            "PRIMARY KEY(" + ClockContract.AlarmTagsColumns.ALARM_ID + ", " +
+                ClockContract.AlarmTagsColumns.TAG_ID + "));");
+
+        LogUtils.i("AlarmTags table created");
+    }
+
+    private static void createEventLogTable(SQLiteDatabase db, String eventLogTableName) {
+        db.execSQL("CREATE TABLE " + eventLogTableName + " (" +
+            ClockContract.EventLogColumns._ID + " INTEGER PRIMARY KEY, " +
+            ClockContract.EventLogColumns.TIMESTAMP + " INTEGER NOT NULL, " +
+            ClockContract.EventLogColumns.EVENT_TYPE + " TEXT NOT NULL, " +
+            ClockContract.EventLogColumns.ALARM_UUID + " TEXT, " +
+            ClockContract.EventLogColumns.ALARM_LABEL + " TEXT, " +
+            ClockContract.EventLogColumns.DETAILS + " TEXT);");
+
+        LogUtils.i("EventLog table created");
+    }
+
     @Override
     public void onCreate(SQLiteDatabase db) {
         createAlarmsTable(db, ALARMS_TABLE_NAME);
         createInstanceTable(db, INSTANCES_TABLE_NAME);
+        createTagsTable(db, TAGS_TABLE_NAME);
+        createAlarmTagsTable(db, ALARM_TAGS_TABLE_NAME, ALARMS_TABLE_NAME, TAGS_TABLE_NAME);
+        createEventLogTable(db, EVENT_LOG_TABLE_NAME);
     }
 
     @Override
@@ -275,6 +333,81 @@ class ClockDatabaseHelper extends SQLiteOpenHelper {
                 + " INTEGER NOT NULL DEFAULT 0;");
 
             LogUtils.i("pauseStartDate and pauseEndDate columns added for version 26 upgrade.");
+        }
+
+        if (oldVersion < 27) {
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.CREATED_AT
+                + " INTEGER NOT NULL DEFAULT 0;");
+
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.UPDATED_AT
+                + " INTEGER NOT NULL DEFAULT 0;");
+
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.STABLE_UUID
+                + " TEXT NOT NULL DEFAULT '';");
+
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.RING_COUNT
+                + " INTEGER NOT NULL DEFAULT 0;");
+
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.SNOOZE_EXTEND_ENABLED
+                + " INTEGER NOT NULL DEFAULT 0;");
+
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.SNOOZE_EXTEND_MINUTES
+                + " INTEGER NOT NULL DEFAULT 5;");
+
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.SNOOZE_EXTEND_MAX_MINUTES
+                + " INTEGER NOT NULL DEFAULT 0;");
+
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.WIFI_RULE_ENABLED
+                + " INTEGER NOT NULL DEFAULT 0;");
+
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.WIFI_SSID
+                + " TEXT NOT NULL DEFAULT '';");
+
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.WIFI_CONDITION
+                + " TEXT NOT NULL DEFAULT '" + ClockContract.AlarmsColumns.WIFI_CONDITION_PRESENT + "';");
+
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.WIFI_ACTION
+                + " TEXT NOT NULL DEFAULT '" + ClockContract.AlarmsColumns.WIFI_ACTION_ENABLE + "';");
+
+            db.execSQL("ALTER TABLE " + INSTANCES_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.InstancesColumns.SNOOZE_COUNT
+                + " INTEGER NOT NULL DEFAULT 0;");
+
+            createTagsTable(db, TAGS_TABLE_NAME);
+            createAlarmTagsTable(db, ALARM_TAGS_TABLE_NAME, ALARMS_TABLE_NAME, TAGS_TABLE_NAME);
+            createEventLogTable(db, EVENT_LOG_TABLE_NAME);
+
+            // Populate created_at, updated_at and stable_uuid for alarms that existed prior to
+            // this upgrade so every alarm has a valid, non-empty stable identifier.
+            final long now = System.currentTimeMillis();
+            try (Cursor cursor = db.query(ALARMS_TABLE_NAME,
+                new String[]{ClockContract.AlarmsColumns._ID}, null, null, null, null, null)) {
+                while (cursor.moveToNext()) {
+                    final long alarmId = cursor.getLong(0);
+                    final ContentValues values = new ContentValues();
+                    values.put(ClockContract.AlarmsColumns.CREATED_AT, now);
+                    values.put(ClockContract.AlarmsColumns.UPDATED_AT, now);
+                    values.put(ClockContract.AlarmsColumns.STABLE_UUID, UUID.randomUUID().toString());
+                    db.update(ALARMS_TABLE_NAME, values,
+                        ClockContract.AlarmsColumns._ID + " = ?",
+                        new String[]{String.valueOf(alarmId)});
+                }
+            }
+
+            LogUtils.i("Added created_at, updated_at, stable_uuid, ring_count, snooze extend and " +
+                "Wi-Fi rule columns to alarms, snooze_count column to instances, and created " +
+                "tags/alarm_tags/event_log tables for version 27 upgrade.");
         }
     }
 

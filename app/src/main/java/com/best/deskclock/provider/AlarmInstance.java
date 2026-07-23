@@ -69,7 +69,8 @@ public final class AlarmInstance implements ClockContract.InstancesColumns {
         MISSED_ALARM_REPEAT_COUNT,
         MISSED_ALARM_REPEAT_LIMIT,
         CRESCENDO_DURATION,
-        ALARM_VOLUME
+        ALARM_VOLUME,
+        SNOOZE_COUNT
     };
 
     /**
@@ -96,8 +97,9 @@ public final class AlarmInstance implements ClockContract.InstancesColumns {
     private static final int MISSED_ALARM_MAX_COUNT_INDEX = 17;
     private static final int CRESCENDO_DURATION_INDEX = 18;
     private static final int ALARM_VOLUME_INDEX = 19;
+    private static final int SNOOZE_COUNT_INDEX = 20;
 
-    private static final int COLUMN_COUNT = ALARM_VOLUME_INDEX + 1;
+    private static final int COLUMN_COUNT = SNOOZE_COUNT_INDEX + 1;
     // Public fields
     public long mId;
     public int mYear;
@@ -120,6 +122,7 @@ public final class AlarmInstance implements ClockContract.InstancesColumns {
     public int mCrescendoDuration;
     // Alarm volume level in steps; not a percentage
     public int mAlarmVolume;
+    public int mSnoozeCount;
 
     public AlarmInstance(Calendar calendar, Long alarmId) {
         this(calendar);
@@ -142,6 +145,7 @@ public final class AlarmInstance implements ClockContract.InstancesColumns {
         mMissedAlarmRepeatLimit = Integer.parseInt(DEFAULT_MISSED_ALARM_REPEAT_LIMIT);
         mCrescendoDuration = DEFAULT_VOLUME_CRESCENDO_DURATION;
         mAlarmVolume = DEFAULT_ALARM_VOLUME;
+        mSnoozeCount = 0;
     }
 
     public AlarmInstance(AlarmInstance instance) {
@@ -165,6 +169,7 @@ public final class AlarmInstance implements ClockContract.InstancesColumns {
         this.mMissedAlarmRepeatLimit = instance.mMissedAlarmRepeatLimit;
         this.mCrescendoDuration = instance.mCrescendoDuration;
         this.mAlarmVolume = instance.mAlarmVolume;
+        this.mSnoozeCount = instance.mSnoozeCount;
     }
 
     public AlarmInstance(Cursor c, boolean joinedTable) {
@@ -186,6 +191,7 @@ public final class AlarmInstance implements ClockContract.InstancesColumns {
             mMissedAlarmRepeatLimit = c.getInt(Alarm.INSTANCE_MISSED_ALARM_REPEAT_LIMIT_INDEX);
             mCrescendoDuration = c.getInt(Alarm.INSTANCE_CRESCENDO_DURATION_INDEX);
             mAlarmVolume = c.getInt(Alarm.INSTANCE_ALARM_VOLUME_INDEX);
+            mSnoozeCount = c.getInt(Alarm.INSTANCE_SNOOZE_COUNT_INDEX);
         } else {
             mId = c.getLong(ID_INDEX);
             mYear = c.getInt(YEAR_INDEX);
@@ -204,6 +210,7 @@ public final class AlarmInstance implements ClockContract.InstancesColumns {
             mMissedAlarmRepeatLimit = c.getInt(MISSED_ALARM_MAX_COUNT_INDEX);
             mCrescendoDuration = c.getInt(CRESCENDO_DURATION_INDEX);
             mAlarmVolume = c.getInt(ALARM_VOLUME_INDEX);
+            mSnoozeCount = c.getInt(SNOOZE_COUNT_INDEX);
         }
         if (c.isNull(RINGTONE_INDEX)) {
             // Should we be saving this with the current ringtone or leave it null
@@ -250,6 +257,7 @@ public final class AlarmInstance implements ClockContract.InstancesColumns {
         values.put(MISSED_ALARM_REPEAT_LIMIT, mMissedAlarmRepeatLimit);
         values.put(CRESCENDO_DURATION, mCrescendoDuration);
         values.put(ALARM_VOLUME, mAlarmVolume);
+        values.put(SNOOZE_COUNT, mSnoozeCount);
 
         return values;
     }
@@ -553,6 +561,7 @@ public final class AlarmInstance implements ClockContract.InstancesColumns {
             ", mMissedAlarmRepeatLimit=" + mMissedAlarmRepeatLimit +
             ", mCrescendoDuration=" + mCrescendoDuration +
             ", mAlarmVolume=" + mAlarmVolume +
+            ", mSnoozeCount=" + mSnoozeCount +
             '}';
     }
 }

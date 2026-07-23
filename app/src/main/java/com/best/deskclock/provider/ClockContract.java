@@ -139,9 +139,27 @@ public final class ClockContract {
     }
 
     /**
+     * Column names shared by tables that track creation/update timestamps.
+     */
+    private interface TimestampColumns {
+
+        /**
+         * Timestamp (ms since epoch) when the row was created.
+         * <p>Type: LONG</p>
+         */
+        String CREATED_AT = "created_at";
+
+        /**
+         * Timestamp (ms since epoch) when the row was last updated.
+         * <p>Type: LONG</p>
+         */
+        String UPDATED_AT = "updated_at";
+    }
+
+    /**
      * Constants for the Alarms table, which contains the user created alarms.
      */
-    protected interface AlarmsColumns extends AlarmSettingColumns, BaseColumns {
+    protected interface AlarmsColumns extends AlarmSettingColumns, TimestampColumns, BaseColumns {
 
         /**
          * The content:// style URL for this table.
@@ -206,6 +224,84 @@ public final class ClockContract {
          * <p>Type: INTEGER</p>
          */
         String DELETE_AFTER_USE = "delete_after_use";
+
+        /**
+         * Stable unique identifier for the alarm that survives id reuse/renumbering.
+         * <p>Type: TEXT</p>
+         */
+        String STABLE_UUID = "stable_uuid";
+
+        /**
+         * Number of times this alarm has rung.
+         * <p>Type: INTEGER</p>
+         */
+        String RING_COUNT = "ring_count";
+
+        /**
+         * True if the snooze duration should be progressively extended on repeated snoozes.
+         * <p>Type: BOOLEAN</p>
+         */
+        String SNOOZE_EXTEND_ENABLED = "snooze_extend_enabled";
+
+        /**
+         * Number of minutes to extend the snooze duration by on each successive snooze.
+         * <p>Type: INTEGER</p>
+         */
+        String SNOOZE_EXTEND_MINUTES = "snooze_extend_minutes";
+
+        /**
+         * Maximum number of minutes the snooze duration is allowed to be extended to.
+         * <p>Type: INTEGER</p>
+         */
+        String SNOOZE_EXTEND_MAX_MINUTES = "snooze_extend_max_minutes";
+
+        /**
+         * True if a Wi-Fi based rule should control this alarm.
+         * <p>Type: BOOLEAN</p>
+         */
+        String WIFI_RULE_ENABLED = "wifi_rule_enabled";
+
+        /**
+         * SSID of the Wi-Fi network used by the Wi-Fi rule.
+         * <p>Type: STRING</p>
+         */
+        String WIFI_SSID = "wifi_ssid";
+
+        /**
+         * Condition of the Wi-Fi rule. One of {@link #WIFI_CONDITION_PRESENT} or
+         * {@link #WIFI_CONDITION_ABSENT}.
+         * <p>Type: STRING</p>
+         */
+        String WIFI_CONDITION = "wifi_condition";
+
+        /**
+         * Action of the Wi-Fi rule. One of {@link #WIFI_ACTION_ENABLE} or
+         * {@link #WIFI_ACTION_DISABLE}.
+         * <p>Type: STRING</p>
+         */
+        String WIFI_ACTION = "wifi_action";
+
+        /**
+         * {@link #WIFI_CONDITION} value meaning the Wi-Fi network is in range/connected.
+         */
+        String WIFI_CONDITION_PRESENT = "PRESENT";
+
+        /**
+         * {@link #WIFI_CONDITION} value meaning the Wi-Fi network is out of range/disconnected.
+         */
+        String WIFI_CONDITION_ABSENT = "ABSENT";
+
+        /**
+         * {@link #WIFI_ACTION} value meaning the alarm should be enabled when the Wi-Fi
+         * condition is met.
+         */
+        String WIFI_ACTION_ENABLE = "ENABLE";
+
+        /**
+         * {@link #WIFI_ACTION} value meaning the alarm should be disabled when the Wi-Fi
+         * condition is met.
+         */
+        String WIFI_ACTION_DISABLE = "DISABLE";
     }
 
     /**
@@ -322,5 +418,104 @@ public final class ClockContract {
          * <p>Type: INTEGER</p>
          */
         String MISSED_ALARM_REPEAT_COUNT = "missed_alarm_repeat_count";
+
+        /**
+         * Number of times this alarm instance has been snoozed.
+         * <p>Type: INTEGER</p>
+         */
+        String SNOOZE_COUNT = "snooze_count";
+    }
+
+    /**
+     * Constants for the Tags table, which contains user-defined alarm tags.
+     */
+    protected interface TagsColumns extends TimestampColumns, BaseColumns {
+
+        /**
+         * The content:// style URL for this table.
+         */
+        Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/tags");
+
+        /**
+         * Tag name.
+         * <p>Type: TEXT</p>
+         */
+        String NAME = "name";
+
+        /**
+         * Tag color.
+         * <p>Type: INTEGER</p>
+         */
+        String COLOR = "color";
+
+        /**
+         * Optional ringtone associated with the tag.
+         * <p>Type: TEXT</p>
+         */
+        String RINGTONE_URI = "ringtone_uri";
+    }
+
+    /**
+     * Constants for the AlarmTags table, which maps alarms to tags (many-to-many).
+     */
+    protected interface AlarmTagsColumns {
+
+        /**
+         * The content:// style URL for this table.
+         */
+        Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/alarm_tags");
+
+        /**
+         * Foreign key to the Alarms table.
+         * <p>Type: INTEGER (long)</p>
+         */
+        String ALARM_ID = "alarm_id";
+
+        /**
+         * Foreign key to the Tags table.
+         * <p>Type: INTEGER (long)</p>
+         */
+        String TAG_ID = "tag_id";
+    }
+
+    /**
+     * Constants for the EventLog table, which contains a history of alarm-related events.
+     */
+    protected interface EventLogColumns extends BaseColumns {
+
+        /**
+         * The content:// style URL for this table.
+         */
+        Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/event_log");
+
+        /**
+         * Timestamp (ms since epoch) when the event occurred.
+         * <p>Type: LONG</p>
+         */
+        String TIMESTAMP = "timestamp";
+
+        /**
+         * Type of event, e.g. "ALARM_FIRED", "ALARM_DISMISSED", "ALARM_SNOOZED".
+         * <p>Type: TEXT</p>
+         */
+        String EVENT_TYPE = "event_type";
+
+        /**
+         * Stable UUID of the alarm the event refers to, if any.
+         * <p>Type: TEXT</p>
+         */
+        String ALARM_UUID = "alarm_uuid";
+
+        /**
+         * Label of the alarm at the time the event occurred, if any.
+         * <p>Type: TEXT</p>
+         */
+        String ALARM_LABEL = "alarm_label";
+
+        /**
+         * Free-form details about the event.
+         * <p>Type: TEXT</p>
+         */
+        String DETAILS = "details";
     }
 }

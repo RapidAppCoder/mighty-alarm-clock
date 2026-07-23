@@ -37,6 +37,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.TimeZone;
+import java.util.UUID;
 
 public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
     /**
@@ -147,7 +148,18 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         ALARM_VOLUME,
         MANUAL_SORT_ORDER,
         PAUSE_START_DATE,
-        PAUSE_END_DATE
+        PAUSE_END_DATE,
+        CREATED_AT,
+        UPDATED_AT,
+        STABLE_UUID,
+        RING_COUNT,
+        SNOOZE_EXTEND_ENABLED,
+        SNOOZE_EXTEND_MINUTES,
+        SNOOZE_EXTEND_MAX_MINUTES,
+        WIFI_RULE_ENABLED,
+        WIFI_SSID,
+        WIFI_CONDITION,
+        WIFI_ACTION
     };
     private static final String[] QUERY_ALARMS_WITH_INSTANCES_COLUMNS = {
         ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + _ID,
@@ -173,6 +185,17 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + MANUAL_SORT_ORDER,
         ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + PAUSE_START_DATE,
         ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + PAUSE_END_DATE,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + CREATED_AT,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + UPDATED_AT,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + STABLE_UUID,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + RING_COUNT,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + SNOOZE_EXTEND_ENABLED,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + SNOOZE_EXTEND_MINUTES,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + SNOOZE_EXTEND_MAX_MINUTES,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + WIFI_RULE_ENABLED,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + WIFI_SSID,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + WIFI_CONDITION,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + WIFI_ACTION,
         ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns.ALARM_STATE,
         ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns._ID,
         ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns.YEAR,
@@ -190,7 +213,8 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns.MISSED_ALARM_REPEAT_COUNT,
         ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns.MISSED_ALARM_REPEAT_LIMIT,
         ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns.CRESCENDO_DURATION,
-        ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns.ALARM_VOLUME
+        ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns.ALARM_VOLUME,
+        ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns.SNOOZE_COUNT
     };
     /**
      * These save calls to cursor.getColumnIndexOrThrow()
@@ -219,28 +243,40 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
     private static final int MANUAL_SORT_ORDER_INDEX = 20;
     private static final int PAUSE_START_DATE_INDEX = 21;
     private static final int PAUSE_END_DATE_INDEX = 22;
+    private static final int CREATED_AT_INDEX = 23;
+    private static final int UPDATED_AT_INDEX = 24;
+    private static final int STABLE_UUID_INDEX = 25;
+    private static final int RING_COUNT_INDEX = 26;
+    private static final int SNOOZE_EXTEND_ENABLED_INDEX = 27;
+    private static final int SNOOZE_EXTEND_MINUTES_INDEX = 28;
+    private static final int SNOOZE_EXTEND_MAX_MINUTES_INDEX = 29;
+    private static final int WIFI_RULE_ENABLED_INDEX = 30;
+    private static final int WIFI_SSID_INDEX = 31;
+    private static final int WIFI_CONDITION_INDEX = 32;
+    private static final int WIFI_ACTION_INDEX = 33;
 
-    private static final int INSTANCE_STATE_INDEX = 23;
-    public static final int INSTANCE_ID_INDEX = 24;
-    public static final int INSTANCE_YEAR_INDEX = 25;
-    public static final int INSTANCE_MONTH_INDEX = 26;
-    public static final int INSTANCE_DAY_INDEX = 27;
-    public static final int INSTANCE_HOUR_INDEX = 28;
-    public static final int INSTANCE_MINUTE_INDEX = 29;
-    public static final int INSTANCE_LABEL_INDEX = 30;
-    public static final int INSTANCE_SYNC_BY_LABEL_INDEX = 31;
-    public static final int INSTANCE_VIBRATE_INDEX = 32;
-    public static final int INSTANCE_VIBRATION_PATTERN_INDEX = 33;
-    public static final int INSTANCE_FLASH_INDEX = 34;
-    public static final int INSTANCE_AUTO_SILENCE_DURATION_INDEX = 35;
-    public static final int INSTANCE_SNOOZE_DURATION_INDEX = 36;
-    public static final int INSTANCE_MISSED_ALARM_REPEAT_COUNT_INDEX = 37;
-    public static final int INSTANCE_MISSED_ALARM_REPEAT_LIMIT_INDEX = 38;
-    public static final int INSTANCE_CRESCENDO_DURATION_INDEX = 39;
-    public static final int INSTANCE_ALARM_VOLUME_INDEX = 40;
+    private static final int INSTANCE_STATE_INDEX = 34;
+    public static final int INSTANCE_ID_INDEX = 35;
+    public static final int INSTANCE_YEAR_INDEX = 36;
+    public static final int INSTANCE_MONTH_INDEX = 37;
+    public static final int INSTANCE_DAY_INDEX = 38;
+    public static final int INSTANCE_HOUR_INDEX = 39;
+    public static final int INSTANCE_MINUTE_INDEX = 40;
+    public static final int INSTANCE_LABEL_INDEX = 41;
+    public static final int INSTANCE_SYNC_BY_LABEL_INDEX = 42;
+    public static final int INSTANCE_VIBRATE_INDEX = 43;
+    public static final int INSTANCE_VIBRATION_PATTERN_INDEX = 44;
+    public static final int INSTANCE_FLASH_INDEX = 45;
+    public static final int INSTANCE_AUTO_SILENCE_DURATION_INDEX = 46;
+    public static final int INSTANCE_SNOOZE_DURATION_INDEX = 47;
+    public static final int INSTANCE_MISSED_ALARM_REPEAT_COUNT_INDEX = 48;
+    public static final int INSTANCE_MISSED_ALARM_REPEAT_LIMIT_INDEX = 49;
+    public static final int INSTANCE_CRESCENDO_DURATION_INDEX = 50;
+    public static final int INSTANCE_ALARM_VOLUME_INDEX = 51;
+    public static final int INSTANCE_SNOOZE_COUNT_INDEX = 52;
 
-    private static final int COLUMN_COUNT = PAUSE_END_DATE_INDEX + 1;
-    private static final int ALARM_JOIN_INSTANCE_COLUMN_COUNT = INSTANCE_ALARM_VOLUME_INDEX + 1;
+    private static final int COLUMN_COUNT = WIFI_ACTION_INDEX + 1;
+    private static final int ALARM_JOIN_INSTANCE_COLUMN_COUNT = INSTANCE_SNOOZE_COUNT_INDEX + 1;
     // Public fields
     public long id;
     public boolean enabled;
@@ -266,6 +302,17 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
     public int manualSortOrder;
     public long pauseStartDate;
     public long pauseEndDate;
+    public long createdAt;
+    public long updatedAt;
+    public String stableUuid;
+    public int ringCount;
+    public boolean snoozeExtendEnabled;
+    public int snoozeExtendMinutes;
+    public int snoozeExtendMaxMinutes;
+    public boolean wifiRuleEnabled;
+    public String wifiSsid;
+    public String wifiCondition;
+    public String wifiAction;
     public int instanceState;
 
     // Creates a default alarm at the current time.
@@ -300,6 +347,18 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         this.manualSortOrder = 0;
         this.pauseStartDate = 0;
         this.pauseEndDate = 0;
+        final long now = System.currentTimeMillis();
+        this.createdAt = now;
+        this.updatedAt = now;
+        this.stableUuid = UUID.randomUUID().toString();
+        this.ringCount = 0;
+        this.snoozeExtendEnabled = false;
+        this.snoozeExtendMinutes = 5;
+        this.snoozeExtendMaxMinutes = 0;
+        this.wifiRuleEnabled = false;
+        this.wifiSsid = "";
+        this.wifiCondition = WIFI_CONDITION_PRESENT;
+        this.wifiAction = WIFI_ACTION_ENABLE;
     }
 
     // Used to back up/restore the alarm
@@ -331,6 +390,20 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         this.manualSortOrder = manualSortOrder;
         this.pauseStartDate = pauseStartDate;
         this.pauseEndDate = pauseEndDate;
+        // These fields did not exist in older backups, so they are initialized with sensible
+        // defaults rather than being restored.
+        final long now = System.currentTimeMillis();
+        this.createdAt = now;
+        this.updatedAt = now;
+        this.stableUuid = UUID.randomUUID().toString();
+        this.ringCount = 0;
+        this.snoozeExtendEnabled = false;
+        this.snoozeExtendMinutes = 5;
+        this.snoozeExtendMaxMinutes = 0;
+        this.wifiRuleEnabled = false;
+        this.wifiSsid = "";
+        this.wifiCondition = WIFI_CONDITION_PRESENT;
+        this.wifiAction = WIFI_ACTION_ENABLE;
     }
 
     // Used to create a clone of the given alarm
@@ -359,6 +432,20 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         this.manualSortOrder = original.manualSortOrder;
         this.pauseStartDate = original.pauseStartDate;
         this.pauseEndDate = original.pauseEndDate;
+        // A clone represents a distinct alarm, so it gets its own stable identity and a
+        // reset ring count, while behavior settings (snooze extension, Wi-Fi rule) carry over.
+        this.stableUuid = UUID.randomUUID().toString();
+        this.ringCount = 0;
+        this.snoozeExtendEnabled = original.snoozeExtendEnabled;
+        this.snoozeExtendMinutes = original.snoozeExtendMinutes;
+        this.snoozeExtendMaxMinutes = original.snoozeExtendMaxMinutes;
+        this.wifiRuleEnabled = original.wifiRuleEnabled;
+        this.wifiSsid = original.wifiSsid;
+        this.wifiCondition = original.wifiCondition;
+        this.wifiAction = original.wifiAction;
+        final long now = System.currentTimeMillis();
+        this.createdAt = now;
+        this.updatedAt = now;
     }
 
     public Alarm(Cursor c) {
@@ -384,6 +471,17 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         manualSortOrder = c.getInt(MANUAL_SORT_ORDER_INDEX);
         pauseStartDate = c.getLong(PAUSE_START_DATE_INDEX);
         pauseEndDate = c.getLong(PAUSE_END_DATE_INDEX);
+        createdAt = c.getLong(CREATED_AT_INDEX);
+        updatedAt = c.getLong(UPDATED_AT_INDEX);
+        stableUuid = c.getString(STABLE_UUID_INDEX);
+        ringCount = c.getInt(RING_COUNT_INDEX);
+        snoozeExtendEnabled = c.getInt(SNOOZE_EXTEND_ENABLED_INDEX) == 1;
+        snoozeExtendMinutes = c.getInt(SNOOZE_EXTEND_MINUTES_INDEX);
+        snoozeExtendMaxMinutes = c.getInt(SNOOZE_EXTEND_MAX_MINUTES_INDEX);
+        wifiRuleEnabled = c.getInt(WIFI_RULE_ENABLED_INDEX) == 1;
+        wifiSsid = c.getString(WIFI_SSID_INDEX);
+        wifiCondition = c.getString(WIFI_CONDITION_INDEX);
+        wifiAction = c.getString(WIFI_ACTION_INDEX);
 
         if (c.getColumnCount() == ALARM_JOIN_INSTANCE_COLUMN_COUNT) {
             instanceState = c.getInt(INSTANCE_STATE_INDEX);
@@ -424,6 +522,17 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         manualSortOrder = p.readInt();
         pauseStartDate = p.readLong();
         pauseEndDate = p.readLong();
+        createdAt = p.readLong();
+        updatedAt = p.readLong();
+        stableUuid = p.readString();
+        ringCount = p.readInt();
+        snoozeExtendEnabled = p.readInt() == 1;
+        snoozeExtendMinutes = p.readInt();
+        snoozeExtendMaxMinutes = p.readInt();
+        wifiRuleEnabled = p.readInt() == 1;
+        wifiSsid = p.readString();
+        wifiCondition = p.readString();
+        wifiAction = p.readString();
     }
 
     public ContentValues createContentValues() {
@@ -453,6 +562,17 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         values.put(MANUAL_SORT_ORDER, manualSortOrder);
         values.put(PAUSE_START_DATE, pauseStartDate);
         values.put(PAUSE_END_DATE, pauseEndDate);
+        values.put(CREATED_AT, createdAt);
+        values.put(UPDATED_AT, updatedAt);
+        values.put(STABLE_UUID, stableUuid);
+        values.put(RING_COUNT, ringCount);
+        values.put(SNOOZE_EXTEND_ENABLED, snoozeExtendEnabled ? 1 : 0);
+        values.put(SNOOZE_EXTEND_MINUTES, snoozeExtendMinutes);
+        values.put(SNOOZE_EXTEND_MAX_MINUTES, snoozeExtendMaxMinutes);
+        values.put(WIFI_RULE_ENABLED, wifiRuleEnabled ? 1 : 0);
+        values.put(WIFI_SSID, wifiSsid);
+        values.put(WIFI_CONDITION, wifiCondition);
+        values.put(WIFI_ACTION, wifiAction);
 
         if (alert == null) {
             // We want to put null, so default alarm changes
@@ -488,6 +608,17 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         p.writeInt(manualSortOrder);
         p.writeLong(pauseStartDate);
         p.writeLong(pauseEndDate);
+        p.writeLong(createdAt);
+        p.writeLong(updatedAt);
+        p.writeString(stableUuid);
+        p.writeInt(ringCount);
+        p.writeInt(snoozeExtendEnabled ? 1 : 0);
+        p.writeInt(snoozeExtendMinutes);
+        p.writeInt(snoozeExtendMaxMinutes);
+        p.writeInt(wifiRuleEnabled ? 1 : 0);
+        p.writeString(wifiSsid);
+        p.writeString(wifiCondition);
+        p.writeString(wifiAction);
     }
 
     public int describeContents() {
@@ -626,6 +757,7 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         if (id == Alarm.INVALID_ID) {
             return;
         }
+        updatedAt = System.currentTimeMillis();
         ContentValues values = createContentValues();
         contentResolver.update(getContentUri(id), values, null, null);
     }
@@ -739,7 +871,14 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
             || snoozeDuration != other.snoozeDuration
             || missedAlarmRepeatLimit != other.missedAlarmRepeatLimit
             || crescendoDuration != other.crescendoDuration
-            || alarmVolume != other.alarmVolume;
+            || alarmVolume != other.alarmVolume
+            || snoozeExtendEnabled != other.snoozeExtendEnabled
+            || snoozeExtendMinutes != other.snoozeExtendMinutes
+            || snoozeExtendMaxMinutes != other.snoozeExtendMaxMinutes
+            || wifiRuleEnabled != other.wifiRuleEnabled
+            || !Objects.equals(wifiSsid, other.wifiSsid)
+            || !Objects.equals(wifiCondition, other.wifiCondition)
+            || !Objects.equals(wifiAction, other.wifiAction);
     }
 
     public boolean isTomorrow(Calendar now) {
@@ -1083,6 +1222,17 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
             ", manualSortOrder=" + manualSortOrder +
             ", pauseStartDate=" + pauseStartDate +
             ", pauseEndDate=" + pauseEndDate +
+            ", createdAt=" + createdAt +
+            ", updatedAt=" + updatedAt +
+            ", stableUuid='" + stableUuid + '\'' +
+            ", ringCount=" + ringCount +
+            ", snoozeExtendEnabled=" + snoozeExtendEnabled +
+            ", snoozeExtendMinutes=" + snoozeExtendMinutes +
+            ", snoozeExtendMaxMinutes=" + snoozeExtendMaxMinutes +
+            ", wifiRuleEnabled=" + wifiRuleEnabled +
+            ", wifiSsid='" + wifiSsid + '\'' +
+            ", wifiCondition='" + wifiCondition + '\'' +
+            ", wifiAction='" + wifiAction + '\'' +
             '}';
     }
 
