@@ -233,10 +233,14 @@ public class AlarmItemViewHolder extends RecyclerView.ViewHolder {
         } else {
             base = context.getString(R.string.mighty_interval_summary_minutes, alarm.repeatIntervalMinutes);
         }
-        if (alarm.repeatMaxCount > 0) {
-            return context.getString(R.string.mighty_interval_summary_with_max, base, alarm.repeatMaxCount);
+        final String withMax = alarm.repeatMaxCount > 0
+            ? context.getString(R.string.mighty_interval_summary_with_max, base, alarm.repeatMaxCount)
+            : base;
+        if (alarm.isSpecifiedDate() && !alarm.isDateInThePast()) {
+            return context.getString(R.string.mighty_interval_summary_with_date,
+                AlarmUtils.formatAlarmDate(alarm), withMax);
         }
-        return base;
+        return withMax;
     }
 
     private void bindUpcomingDate(Alarm alarm, AlarmInstance alarmInstance) {

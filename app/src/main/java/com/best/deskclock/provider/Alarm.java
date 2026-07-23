@@ -1082,7 +1082,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
      * are also taken into account by resetting the hour and minute after shifting days.
      *
      * @return a {@link Calendar} instance representing the next valid alarm time.
-     * <p>- For repeating alarms: the next valid day of the week at the configured hour/minute.</p>
+     * <p>- For interval alarms: a future calendar start date (when set) at the configured
+     * hour/minute for the first fire; subsequent fires advance by {@code repeatIntervalMinutes}.</p>
+     * <p>- For weekday-repeating alarms: the next valid day of the week at the configured hour/minute.</p>
      * <p>- For one-time alarms: the configured date and time, or the following day if the
      * specified time has already passed relative to {@code currentTime}.</p>
      */
@@ -1094,17 +1096,31 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         if (isIntervalRepeating()) {
             nextInstanceTime.setTimeInMillis(currentTime.getTimeInMillis());
 
-            // First fire uses the configured hour/minute. Subsequent fires advance by the interval
-            // from the reference time passed in (typically the previous fire time).
-            final Calendar firstOccurrence = Calendar.getInstance(currentTime.getTimeZone());
-            firstOccurrence.setTimeInMillis(currentTime.getTimeInMillis());
-            firstOccurrence.set(Calendar.SECOND, 0);
-            firstOccurrence.set(Calendar.MILLISECOND, 0);
-            firstOccurrence.set(Calendar.HOUR_OF_DAY, hour);
-            firstOccurrence.set(Calendar.MINUTE, minutes);
+            // First fire: prefer a future calendar start date when set; otherwise today's
+            // hour/minute if still ahead. Subsequent fires advance by the interval from the
+            // reference time passed in (typically the previous fire time).
+            if (intervalFireCount == 0) {
+                final Calendar firstOccurrence = Calendar.getInstance(currentTime.getTimeZone());
+                firstOccurrence.set(Calendar.SECOND, 0);
+                firstOccurrence.set(Calendar.MILLISECOND, 0);
+                firstOccurrence.set(Calendar.HOUR_OF_DAY, hour);
+                firstOccurrence.set(Calendar.MINUTE, minutes);
 
-            if (intervalFireCount == 0 && firstOccurrence.getTimeInMillis() > currentTime.getTimeInMillis()) {
-                return firstOccurrence;
+                if (isSpecifiedDate() && !isDateInThePast()) {
+                    firstOccurrence.set(Calendar.YEAR, year);
+                    firstOccurrence.set(Calendar.MONTH, month);
+                    firstOccurrence.set(Calendar.DAY_OF_MONTH, day);
+                } else {
+                    firstOccurrence.setTimeInMillis(currentTime.getTimeInMillis());
+                    firstOccurrence.set(Calendar.SECOND, 0);
+                    firstOccurrence.set(Calendar.MILLISECOND, 0);
+                    firstOccurrence.set(Calendar.HOUR_OF_DAY, hour);
+                    firstOccurrence.set(Calendar.MINUTE, minutes);
+                }
+
+                if (firstOccurrence.getTimeInMillis() > currentTime.getTimeInMillis()) {
+                    return firstOccurrence;
+                }
             }
 
             nextInstanceTime.add(Calendar.MINUTE, Math.max(1, repeatIntervalMinutes));

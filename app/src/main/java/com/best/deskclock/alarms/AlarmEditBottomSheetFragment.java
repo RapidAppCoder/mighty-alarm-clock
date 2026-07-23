@@ -461,7 +461,7 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
             this::applyDate)
         );
 
-        if (mAlarm.daysOfWeek.isRepeating() || mAlarm.isIntervalRepeating()) {
+        if (mAlarm.daysOfWeek.isRepeating()) {
             clearSelectedDate(openCalendarText);
         } else if (mAlarm.isSpecifiedDate()) {
             if (mAlarm.isDateInThePast()) {
@@ -888,20 +888,63 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
         controlsContainer.setVisibility(mAlarm.isIntervalRepeating() ? VISIBLE : GONE);
 
         final int initialMinutes = mAlarm.repeatIntervalMinutes > 0 ? mAlarm.repeatIntervalMinutes : 30;
+        // Prefer hours when the stored interval is a whole number of hours (e.g. 25h).
+        final boolean[] useHours = {initialMinutes >= 60 && initialMinutes % 60 == 0};
+        final int[] pendingMinutes = {initialMinutes};
+        final LinearLayout valueStepperHost = new LinearLayout(requireContext());
+        valueStepperHost.setOrientation(LinearLayout.VERTICAL);
 
-        controlsContainer.addView(createStepperRow(
-            getString(R.string.mighty_interval_value_label),
-            initialMinutes, 1, 1440, 1,
-            value -> {
-                if (value >= 60 && value % 60 == 0) {
-                    return getString(R.string.mighty_interval_summary_hours, value / 60);
+        final Runnable rebuildValueStepper = () -> {
+            valueStepperHost.removeAllViews();
+            if (useHours[0]) {
+                final int hours = Math.max(1, Math.min(168, Math.round(pendingMinutes[0] / 60f)));
+                pendingMinutes[0] = hours * 60;
+                if (mAlarm.isIntervalRepeating()) {
+                    mAlarm.repeatIntervalMinutes = pendingMinutes[0];
                 }
-                return getString(R.string.mighty_interval_summary_minutes, value);
-            },
-            value -> {
-                mAlarm.repeatIntervalMinutes = value;
+                valueStepperHost.addView(createStepperRow(
+                    getString(R.string.mighty_interval_value_label),
+                    hours, 1, 168, 1,
+                    value -> getString(R.string.mighty_interval_summary_hours, value),
+                    value -> {
+                        pendingMinutes[0] = value * 60;
+                        mAlarm.repeatIntervalMinutes = pendingMinutes[0];
+                        mAlarm.intervalFireCount = 0;
+                    }));
+            } else {
+                final int displayMinutes = Math.max(1, Math.min(1440, pendingMinutes[0]));
+                pendingMinutes[0] = displayMinutes;
+                if (mAlarm.isIntervalRepeating()) {
+                    mAlarm.repeatIntervalMinutes = pendingMinutes[0];
+                }
+                valueStepperHost.addView(createStepperRow(
+                    getString(R.string.mighty_interval_value_label),
+                    displayMinutes, 1, 1440, 1,
+                    value -> getString(R.string.mighty_interval_summary_minutes, value),
+                    value -> {
+                        pendingMinutes[0] = value;
+                        mAlarm.repeatIntervalMinutes = pendingMinutes[0];
+                        mAlarm.intervalFireCount = 0;
+                    }));
+            }
+        };
+
+        final String[] unitLabels = {
+            getString(R.string.mighty_interval_unit_minutes),
+            getString(R.string.mighty_interval_unit_hours)
+        };
+        controlsContainer.addView(createSpinnerRow(
+            getString(R.string.mighty_interval_unit_label),
+            unitLabels,
+            useHours[0] ? 1 : 0,
+            position -> {
+                useHours[0] = position == 1;
+                rebuildValueStepper.run();
                 mAlarm.intervalFireCount = 0;
             }));
+
+        rebuildValueStepper.run();
+        controlsContainer.addView(valueStepperHost);
 
         controlsContainer.addView(createStepperRow(
             getString(R.string.mighty_interval_max_count_label),
@@ -923,9 +966,7 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
                     mAlarm.daysOfWeek = Weekdays.NONE;
                     mAlarm.pauseStartDate = 0;
                     mAlarm.pauseEndDate = 0;
-                    if (mAlarm.repeatIntervalMinutes <= 0) {
-                        mAlarm.repeatIntervalMinutes = initialMinutes;
-                    }
+                    mAlarm.repeatIntervalMinutes = pendingMinutes[0];
                     mAlarm.intervalFireCount = 0;
                     bindDaysOfWeekButtons();
                     bindSelectedDate();
@@ -1630,13 +1671,6 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
             mAlarm.daysOfWeek = Weekdays.NONE;
         }
 
-        if (mAlarm.isIntervalRepeating()) {
-            mAlarm.repeatIntervalMinutes = 0;
-            mAlarm.repeatMaxCount = 0;
-            mAlarm.intervalFireCount = 0;
-            bindMightyAlarmFeatures();
-        }
-
         if (mAlarm.isPauseSet()) {
             mAlarm.pauseStartDate = 0;
             mAlarm.pauseEndDate = 0;
@@ -1645,6 +1679,7 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
         mAlarm.year = year;
         mAlarm.month = month;
         mAlarm.day = day;
+        mAlarm.intervalFireCount = 0;
 
         bindSelectedDate();
         bindDaysOfWeekButtons();

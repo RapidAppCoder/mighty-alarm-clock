@@ -135,6 +135,31 @@ public final class SampleAlarmsSeeder {
             interval.intervalFireCount = 0;
             interval.addAlarm(cr);
 
+            // Far-future interval reminder: next 1 April at 09:00, then every 25 hours until disabled.
+            final Calendar todayStart = (Calendar) now.clone();
+            todayStart.set(Calendar.HOUR_OF_DAY, 0);
+            todayStart.set(Calendar.MINUTE, 0);
+            todayStart.set(Calendar.SECOND, 0);
+            todayStart.set(Calendar.MILLISECOND, 0);
+            final Calendar nextAprilFirst = (Calendar) todayStart.clone();
+            nextAprilFirst.set(Calendar.MONTH, Calendar.APRIL);
+            nextAprilFirst.set(Calendar.DAY_OF_MONTH, 1);
+            if (nextAprilFirst.before(todayStart)) {
+                nextAprilFirst.add(Calendar.YEAR, 1);
+            }
+            final Alarm futureInterval = new Alarm(
+                nextAprilFirst.get(Calendar.YEAR),
+                nextAprilFirst.get(Calendar.MONTH),
+                nextAprilFirst.get(Calendar.DAY_OF_MONTH),
+                9, 0);
+            futureInterval.enabled = false;
+            futureInterval.label = context.getString(R.string.mighty_sample_alarm_future_interval);
+            futureInterval.daysOfWeek = Weekdays.NONE;
+            futureInterval.repeatIntervalMinutes = 25 * 60;
+            futureInterval.repeatMaxCount = 0;
+            futureInterval.intervalFireCount = 0;
+            futureInterval.addAlarm(cr);
+
             prefs.edit().putBoolean(KEY_SAMPLE_ALARMS_SEEDED, true).apply();
             LogUtils.i("Seeded sample Mighty alarms and tags");
         } catch (Exception e) {

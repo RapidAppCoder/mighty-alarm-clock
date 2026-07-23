@@ -774,6 +774,7 @@
     <string name="mighty_interval_repeat_title">Intervall-Wiederholung</string>
     <string name="mighty_interval_repeat_enabled">In Intervallen wiederholen</string>
     <string name="mighty_interval_value_label">Intervall</string>
+    <string name="mighty_interval_unit_label">Einheit</string>
     <string name="mighty_interval_unit_minutes">Minuten</string>
     <string name="mighty_interval_unit_hours">Stunden</string>
     <string name="mighty_interval_max_count_label">Maximale Wiederholungen</string>
@@ -781,6 +782,7 @@
     <string name="mighty_interval_summary_minutes">Alle %1$d Min</string>
     <string name="mighty_interval_summary_hours">Alle %1$d Std</string>
     <string name="mighty_interval_summary_with_max">%1$s · max. %2$d×</string>
+    <string name="mighty_interval_summary_with_date">%1$s · %2$s</string>
 
     <string name="mighty_sample_tag_work">Arbeit</string>
     <string name="mighty_sample_tag_home">Zuhause</string>
@@ -790,4 +792,5 @@
     <string name="mighty_sample_alarm_wifi">Zuhause-WLAN (Beispiel)</string>
     <string name="mighty_sample_alarm_snooze_extend">Schlummer verlängern (Beispiel)</string>
     <string name="mighty_sample_alarm_interval">Intervall alle 30 Min, max. 3× (Beispiel)</string>
+    <string name="mighty_sample_alarm_future_interval">TÜV-Erinnerung (Beispiel)</string>
 </resources>
