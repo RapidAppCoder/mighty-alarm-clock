@@ -78,6 +78,9 @@ public final class AlarmTimeClickHandler {
 
             if (newState) {
                 AlarmVisualCache.invalidate(alarm.id);
+                if (alarm.isIntervalRepeating()) {
+                    alarm.intervalFireCount = 0;
+                }
             }
 
             // If the alarm is set for a specific date and that date is already in the past,
@@ -160,7 +163,7 @@ public final class AlarmTimeClickHandler {
      * @param alarm the alarm whose date should be validated and corrected
      */
     private void fixAlarmDateIfPast(Alarm alarm) {
-        if (alarm.daysOfWeek.isRepeating()) {
+        if (alarm.isRecurring()) {
             return;
         }
 

@@ -132,7 +132,7 @@ public class AlarmAdapter extends RecyclerView.Adapter<AlarmItemViewHolder> {
                 if (holder.item.isDeleteAfterUse()) {
                     // Remove the alarm from the list immediately!
                     iterator.remove();
-                } else if (!holder.item.daysOfWeek.isRepeating()) {
+                } else if (!holder.item.isRecurring()) {
                     // Standard one-time alarm. Just force the switch to OFF visually.
                     holder.item.enabled = false;
                 }

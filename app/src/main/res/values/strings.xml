@@ -1575,4 +1575,21 @@
     <!-- Alarm list: tag filter -->
     <string name="mighty_tag_filter_all">All tags</string>
 
+
+    <!-- Interval repeat -->
+    <string name="mighty_interval_repeat_title">Interval repeat</string>
+    <string name="mighty_interval_repeat_enabled">Repeat on an interval</string>
+    <string name="mighty_interval_value_label">Interval</string>
+    <string name="mighty_interval_unit_minutes">Minutes</string>
+    <string name="mighty_interval_unit_hours">Hours</string>
+    <string name="mighty_interval_max_count_label">Maximum repeats</string>
+    <string name="mighty_interval_max_unlimited">Unlimited</string>
+    <!-- %1$d = interval in minutes -->
+    <string name="mighty_interval_summary_minutes">Every %1$d min</string>
+    <!-- %1$d = interval in hours -->
+    <string name="mighty_interval_summary_hours">Every %1$d h</string>
+    <!-- %1$s = interval summary, %2$d = max count -->
+    <string name="mighty_interval_summary_with_max">%1$s · max %2$d×</string>
+
+
 </resources>

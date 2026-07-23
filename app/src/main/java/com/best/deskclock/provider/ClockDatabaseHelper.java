@@ -31,7 +31,7 @@ class ClockDatabaseHelper extends SQLiteOpenHelper {
     static final String ALARM_TAGS_TABLE_NAME = "alarm_tags";
     static final String EVENT_LOG_TABLE_NAME = "event_log";
 
-    private static final int DATABASE_VERSION = 27;
+    private static final int DATABASE_VERSION = 28;
     private static final int MINIMUM_SUPPORTED_VERSION = 15;
 
     public ClockDatabaseHelper(Context context) {
@@ -75,7 +75,10 @@ class ClockDatabaseHelper extends SQLiteOpenHelper {
             ClockContract.AlarmsColumns.WIFI_CONDITION + " TEXT NOT NULL DEFAULT '" +
                 ClockContract.AlarmsColumns.WIFI_CONDITION_PRESENT + "', " +
             ClockContract.AlarmsColumns.WIFI_ACTION + " TEXT NOT NULL DEFAULT '" +
-                ClockContract.AlarmsColumns.WIFI_ACTION_ENABLE + "');");
+                ClockContract.AlarmsColumns.WIFI_ACTION_ENABLE + "', " +
+            ClockContract.AlarmsColumns.REPEAT_INTERVAL_MINUTES + " INTEGER NOT NULL DEFAULT 0, " +
+            ClockContract.AlarmsColumns.REPEAT_MAX_COUNT + " INTEGER NOT NULL DEFAULT 0, " +
+            ClockContract.AlarmsColumns.INTERVAL_FIRE_COUNT + " INTEGER NOT NULL DEFAULT 0);");
 
         LogUtils.i("Alarms Table created");
     }
@@ -408,6 +411,19 @@ class ClockDatabaseHelper extends SQLiteOpenHelper {
             LogUtils.i("Added created_at, updated_at, stable_uuid, ring_count, snooze extend and " +
                 "Wi-Fi rule columns to alarms, snooze_count column to instances, and created " +
                 "tags/alarm_tags/event_log tables for version 27 upgrade.");
+        }
+
+        if (oldVersion < 28) {
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.REPEAT_INTERVAL_MINUTES
+                + " INTEGER NOT NULL DEFAULT 0;");
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.REPEAT_MAX_COUNT
+                + " INTEGER NOT NULL DEFAULT 0;");
+            db.execSQL("ALTER TABLE " + ALARMS_TABLE_NAME
+                + " ADD COLUMN " + ClockContract.AlarmsColumns.INTERVAL_FIRE_COUNT
+                + " INTEGER NOT NULL DEFAULT 0;");
+            LogUtils.i("Added interval repeat columns for version 28 upgrade.");
         }
     }
 

@@ -248,7 +248,7 @@ public final class AlarmStateManager extends BroadcastReceiver {
             return;
         }
 
-        if (!alarm.daysOfWeek.isRepeating()) {
+        if (!alarm.isRecurring()) {
             if (alarm.deleteAfterUse) {
                 LogUtils.i("Deleting parent alarm: " + alarm.id);
                 Alarm.deleteAlarm(cr, alarm.id);
@@ -257,6 +257,21 @@ public final class AlarmStateManager extends BroadcastReceiver {
                 alarm.enabled = false;
                 alarm.updateAlarm(cr);
             }
+        } else if (alarm.isIntervalRepeating()) {
+            alarm.intervalFireCount++;
+            if (alarm.hasReachedIntervalMax()) {
+                LogUtils.i("Interval max reached; disabling parent alarm: " + alarm.id);
+                alarm.enabled = false;
+                alarm.updateAlarm(cr);
+                return;
+            }
+            alarm.updateAlarm(cr);
+
+            final AlarmInstance nextRepeatedInstance = alarm.createInstanceAfter(instance.getAlarmTime());
+            LogUtils.i("Creating new instance for interval alarm " + alarm.id + " at " +
+                AlarmUtils.getFormattedTime(context, nextRepeatedInstance.getAlarmTime()));
+            nextRepeatedInstance.addInstance(cr);
+            registerInstance(context, nextRepeatedInstance, true);
         } else {
             AlarmInstance nextRepeatedInstance;
 

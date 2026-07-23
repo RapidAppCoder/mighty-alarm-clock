@@ -214,6 +214,9 @@ public class AlarmItemViewHolder extends RecyclerView.ViewHolder {
             mBinding.daysOfWeek.setTypeface(mGeneralBoldTypeface);
             mBinding.daysOfWeek.setText(context.getString(R.string.alarm_alert_snooze_until,
                 AlarmUtils.getAlarmText(context, alarmInstance, false)));
+        } else if (alarm.isIntervalRepeating()) {
+            mBinding.daysOfWeek.setTypeface(mGeneralTypeface);
+            mBinding.daysOfWeek.setText(formatIntervalSummary(context, alarm));
         } else if (alarmInstance != null && alarm.daysOfWeek.isRepeating()) {
             setRepeatingDaysDescription(context, alarm, alarmInstance);
         } else if (alarm.isSpecifiedDate()) {
@@ -221,6 +224,19 @@ public class AlarmItemViewHolder extends RecyclerView.ViewHolder {
         } else {
             setNonRepeatingDefaultDescription(context, alarm);
         }
+    }
+
+    private static String formatIntervalSummary(Context context, Alarm alarm) {
+        final String base;
+        if (alarm.repeatIntervalMinutes >= 60 && alarm.repeatIntervalMinutes % 60 == 0) {
+            base = context.getString(R.string.mighty_interval_summary_hours, alarm.repeatIntervalMinutes / 60);
+        } else {
+            base = context.getString(R.string.mighty_interval_summary_minutes, alarm.repeatIntervalMinutes);
+        }
+        if (alarm.repeatMaxCount > 0) {
+            return context.getString(R.string.mighty_interval_summary_with_max, base, alarm.repeatMaxCount);
+        }
+        return base;
     }
 
     private void bindUpcomingDate(Alarm alarm, AlarmInstance alarmInstance) {

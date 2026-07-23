@@ -413,6 +413,13 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
                     mAlarm.daysOfWeek = mAlarm.daysOfWeek.setBit(weekday, isChecked);
                     updateDaysOfWeekButtonVisuals(dayButtons[i], isChecked);
 
+                    if (isChecked && mAlarm.isIntervalRepeating()) {
+                        mAlarm.repeatIntervalMinutes = 0;
+                        mAlarm.repeatMaxCount = 0;
+                        mAlarm.intervalFireCount = 0;
+                        bindMightyAlarmFeatures();
+                    }
+
                     if (!mAlarm.daysOfWeek.isRepeating()) {
                         mAlarm.pauseStartDate = 0;
                         mAlarm.pauseEndDate = 0;
@@ -454,7 +461,7 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
             this::applyDate)
         );
 
-        if (mAlarm.daysOfWeek.isRepeating()) {
+        if (mAlarm.daysOfWeek.isRepeating() || mAlarm.isIntervalRepeating()) {
             clearSelectedDate(openCalendarText);
         } else if (mAlarm.isSpecifiedDate()) {
             if (mAlarm.isDateInThePast()) {
@@ -479,7 +486,7 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
     }
 
     private void bindPauseAlarm() {
-        boolean isRepeating = mAlarm.daysOfWeek.isRepeating();
+        boolean isRepeating = mAlarm.isRecurring();
 
         mBinding.pauseAlarmLayout.setEnabled(isRepeating);
         mBinding.pauseAlarm.setEnabled(isRepeating);
@@ -637,7 +644,7 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
     }
 
     private void bindDeleteOccasionalAlarmAfterUse() {
-        final boolean isRepeating = mAlarm.daysOfWeek.isRepeating();
+        final boolean isRepeating = mAlarm.isRecurring();
 
         mBinding.deleteOccasionalAlarmAfterUse.setTypeface(mGeneralTypeface);
         mBinding.deleteOccasionalAlarmAfterUse.setEnabled(!isRepeating);
@@ -867,9 +874,72 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
         mBinding.mightyFeaturesContainer.removeAllViews();
 
         bindTagsSection();
+        bindIntervalRepeatSection();
         bindSnoozeExtendSection();
         bindWifiRuleSection();
         bindExchangeSection();
+    }
+
+    private void bindIntervalRepeatSection() {
+        mBinding.mightyFeaturesContainer.addView(createSectionHeader(getString(R.string.mighty_interval_repeat_title)));
+
+        final LinearLayout controlsContainer = new LinearLayout(requireContext());
+        controlsContainer.setOrientation(LinearLayout.VERTICAL);
+        controlsContainer.setVisibility(mAlarm.isIntervalRepeating() ? VISIBLE : GONE);
+
+        final int initialMinutes = mAlarm.repeatIntervalMinutes > 0 ? mAlarm.repeatIntervalMinutes : 30;
+
+        controlsContainer.addView(createStepperRow(
+            getString(R.string.mighty_interval_value_label),
+            initialMinutes, 1, 1440, 1,
+            value -> {
+                if (value >= 60 && value % 60 == 0) {
+                    return getString(R.string.mighty_interval_summary_hours, value / 60);
+                }
+                return getString(R.string.mighty_interval_summary_minutes, value);
+            },
+            value -> {
+                mAlarm.repeatIntervalMinutes = value;
+                mAlarm.intervalFireCount = 0;
+            }));
+
+        controlsContainer.addView(createStepperRow(
+            getString(R.string.mighty_interval_max_count_label),
+            mAlarm.repeatMaxCount, 0, 100, 1,
+            value -> value == 0
+                ? getString(R.string.mighty_interval_max_unlimited)
+                : String.valueOf(value),
+            value -> {
+                mAlarm.repeatMaxCount = value;
+                mAlarm.intervalFireCount = 0;
+            }));
+
+        mBinding.mightyFeaturesContainer.addView(createSwitchRow(
+            getString(R.string.mighty_interval_repeat_enabled),
+            mAlarm.isIntervalRepeating(),
+            (button, isChecked) -> {
+                Utils.performHapticFeedback(button, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
+                if (isChecked) {
+                    mAlarm.daysOfWeek = Weekdays.NONE;
+                    mAlarm.pauseStartDate = 0;
+                    mAlarm.pauseEndDate = 0;
+                    if (mAlarm.repeatIntervalMinutes <= 0) {
+                        mAlarm.repeatIntervalMinutes = initialMinutes;
+                    }
+                    mAlarm.intervalFireCount = 0;
+                    bindDaysOfWeekButtons();
+                    bindSelectedDate();
+                    bindPauseAlarm();
+                    bindDeleteOccasionalAlarmAfterUse();
+                } else {
+                    mAlarm.repeatIntervalMinutes = 0;
+                    mAlarm.repeatMaxCount = 0;
+                    mAlarm.intervalFireCount = 0;
+                }
+                controlsContainer.setVisibility(isChecked ? VISIBLE : GONE);
+            }));
+
+        mBinding.mightyFeaturesContainer.addView(controlsContainer);
     }
 
     private void bindTagsSection() {
@@ -1558,6 +1628,13 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
     private void applyDate(int year, int month, int day) {
         if (mAlarm.daysOfWeek.isRepeating()) {
             mAlarm.daysOfWeek = Weekdays.NONE;
+        }
+
+        if (mAlarm.isIntervalRepeating()) {
+            mAlarm.repeatIntervalMinutes = 0;
+            mAlarm.repeatMaxCount = 0;
+            mAlarm.intervalFireCount = 0;
+            bindMightyAlarmFeatures();
         }
 
         if (mAlarm.isPauseSet()) {

@@ -135,6 +135,12 @@ public class ClockProvider extends ContentProvider {
             ALARMS_TABLE_NAME + "." + AlarmsColumns.WIFI_CONDITION);
         sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.WIFI_ACTION,
             ALARMS_TABLE_NAME + "." + AlarmsColumns.WIFI_ACTION);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.REPEAT_INTERVAL_MINUTES,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.REPEAT_INTERVAL_MINUTES);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.REPEAT_MAX_COUNT,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.REPEAT_MAX_COUNT);
+        sAlarmsWithInstancesProjection.put(ALARMS_TABLE_NAME + "." + AlarmsColumns.INTERVAL_FIRE_COUNT,
+            ALARMS_TABLE_NAME + "." + AlarmsColumns.INTERVAL_FIRE_COUNT);
 
         sAlarmsWithInstancesProjection.put(INSTANCES_TABLE_NAME + "." + InstancesColumns.ALARM_STATE,
             INSTANCES_TABLE_NAME + "." + InstancesColumns.ALARM_STATE);

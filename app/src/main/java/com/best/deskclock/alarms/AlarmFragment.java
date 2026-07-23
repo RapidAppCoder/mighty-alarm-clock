@@ -451,10 +451,10 @@ public final class AlarmFragment extends DeskClockFragment
             if (mFilterEnabledOnly && !alarm.enabled) {
                 continue;
             }
-            if (mFilterRepeatingOnly && !alarm.daysOfWeek.isRepeating()) {
+            if (mFilterRepeatingOnly && !alarm.isRecurring()) {
                 continue;
             }
-            if (mFilterOneShotOnly && alarm.daysOfWeek.isRepeating()) {
+            if (mFilterOneShotOnly && alarm.isRecurring()) {
                 continue;
             }
             if (mFilterTagAlarmIds != null && !mFilterTagAlarmIds.contains(alarm.id)) {

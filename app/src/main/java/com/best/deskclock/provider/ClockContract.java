@@ -302,6 +302,26 @@ public final class ClockContract {
          * condition is met.
          */
         String WIFI_ACTION_DISABLE = "DISABLE";
+
+        /**
+         * Interval in minutes between successive firings when interval repeat is enabled.
+         * 0 means interval repeat is off (weekday or one-shot mode applies instead).
+         * <p>Type: INTEGER</p>
+         */
+        String REPEAT_INTERVAL_MINUTES = "repeat_interval_minutes";
+
+        /**
+         * Maximum number of interval firings before the alarm is disabled.
+         * 0 means unlimited.
+         * <p>Type: INTEGER</p>
+         */
+        String REPEAT_MAX_COUNT = "repeat_max_count";
+
+        /**
+         * Number of times this interval alarm has fired since the counter was last reset.
+         * <p>Type: INTEGER</p>
+         */
+        String INTERVAL_FIRE_COUNT = "interval_fire_count";
     }
 
     /**

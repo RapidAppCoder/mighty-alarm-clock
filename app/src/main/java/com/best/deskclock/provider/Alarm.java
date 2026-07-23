@@ -159,7 +159,10 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         WIFI_RULE_ENABLED,
         WIFI_SSID,
         WIFI_CONDITION,
-        WIFI_ACTION
+        WIFI_ACTION,
+        REPEAT_INTERVAL_MINUTES,
+        REPEAT_MAX_COUNT,
+        INTERVAL_FIRE_COUNT
     };
     private static final String[] QUERY_ALARMS_WITH_INSTANCES_COLUMNS = {
         ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + _ID,
@@ -196,6 +199,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + WIFI_SSID,
         ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + WIFI_CONDITION,
         ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + WIFI_ACTION,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + REPEAT_INTERVAL_MINUTES,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + REPEAT_MAX_COUNT,
+        ClockDatabaseHelper.ALARMS_TABLE_NAME + "." + INTERVAL_FIRE_COUNT,
         ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns.ALARM_STATE,
         ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns._ID,
         ClockDatabaseHelper.INSTANCES_TABLE_NAME + "." + ClockContract.InstancesColumns.YEAR,
@@ -254,28 +260,31 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
     private static final int WIFI_SSID_INDEX = 31;
     private static final int WIFI_CONDITION_INDEX = 32;
     private static final int WIFI_ACTION_INDEX = 33;
+    private static final int REPEAT_INTERVAL_MINUTES_INDEX = 34;
+    private static final int REPEAT_MAX_COUNT_INDEX = 35;
+    private static final int INTERVAL_FIRE_COUNT_INDEX = 36;
 
-    private static final int INSTANCE_STATE_INDEX = 34;
-    public static final int INSTANCE_ID_INDEX = 35;
-    public static final int INSTANCE_YEAR_INDEX = 36;
-    public static final int INSTANCE_MONTH_INDEX = 37;
-    public static final int INSTANCE_DAY_INDEX = 38;
-    public static final int INSTANCE_HOUR_INDEX = 39;
-    public static final int INSTANCE_MINUTE_INDEX = 40;
-    public static final int INSTANCE_LABEL_INDEX = 41;
-    public static final int INSTANCE_SYNC_BY_LABEL_INDEX = 42;
-    public static final int INSTANCE_VIBRATE_INDEX = 43;
-    public static final int INSTANCE_VIBRATION_PATTERN_INDEX = 44;
-    public static final int INSTANCE_FLASH_INDEX = 45;
-    public static final int INSTANCE_AUTO_SILENCE_DURATION_INDEX = 46;
-    public static final int INSTANCE_SNOOZE_DURATION_INDEX = 47;
-    public static final int INSTANCE_MISSED_ALARM_REPEAT_COUNT_INDEX = 48;
-    public static final int INSTANCE_MISSED_ALARM_REPEAT_LIMIT_INDEX = 49;
-    public static final int INSTANCE_CRESCENDO_DURATION_INDEX = 50;
-    public static final int INSTANCE_ALARM_VOLUME_INDEX = 51;
-    public static final int INSTANCE_SNOOZE_COUNT_INDEX = 52;
+    private static final int INSTANCE_STATE_INDEX = 37;
+    public static final int INSTANCE_ID_INDEX = 38;
+    public static final int INSTANCE_YEAR_INDEX = 39;
+    public static final int INSTANCE_MONTH_INDEX = 40;
+    public static final int INSTANCE_DAY_INDEX = 41;
+    public static final int INSTANCE_HOUR_INDEX = 42;
+    public static final int INSTANCE_MINUTE_INDEX = 43;
+    public static final int INSTANCE_LABEL_INDEX = 44;
+    public static final int INSTANCE_SYNC_BY_LABEL_INDEX = 45;
+    public static final int INSTANCE_VIBRATE_INDEX = 46;
+    public static final int INSTANCE_VIBRATION_PATTERN_INDEX = 47;
+    public static final int INSTANCE_FLASH_INDEX = 48;
+    public static final int INSTANCE_AUTO_SILENCE_DURATION_INDEX = 49;
+    public static final int INSTANCE_SNOOZE_DURATION_INDEX = 50;
+    public static final int INSTANCE_MISSED_ALARM_REPEAT_COUNT_INDEX = 51;
+    public static final int INSTANCE_MISSED_ALARM_REPEAT_LIMIT_INDEX = 52;
+    public static final int INSTANCE_CRESCENDO_DURATION_INDEX = 53;
+    public static final int INSTANCE_ALARM_VOLUME_INDEX = 54;
+    public static final int INSTANCE_SNOOZE_COUNT_INDEX = 55;
 
-    private static final int COLUMN_COUNT = WIFI_ACTION_INDEX + 1;
+    private static final int COLUMN_COUNT = INTERVAL_FIRE_COUNT_INDEX + 1;
     private static final int ALARM_JOIN_INSTANCE_COLUMN_COUNT = INSTANCE_SNOOZE_COUNT_INDEX + 1;
     // Public fields
     public long id;
@@ -313,6 +322,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
     public String wifiSsid;
     public String wifiCondition;
     public String wifiAction;
+    public int repeatIntervalMinutes;
+    public int repeatMaxCount;
+    public int intervalFireCount;
     public int instanceState;
 
     // Creates a default alarm at the current time.
@@ -359,6 +371,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         this.wifiSsid = "";
         this.wifiCondition = WIFI_CONDITION_PRESENT;
         this.wifiAction = WIFI_ACTION_ENABLE;
+        this.repeatIntervalMinutes = 0;
+        this.repeatMaxCount = 0;
+        this.intervalFireCount = 0;
     }
 
     // Used to back up/restore the alarm
@@ -404,6 +419,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         this.wifiSsid = "";
         this.wifiCondition = WIFI_CONDITION_PRESENT;
         this.wifiAction = WIFI_ACTION_ENABLE;
+        this.repeatIntervalMinutes = 0;
+        this.repeatMaxCount = 0;
+        this.intervalFireCount = 0;
     }
 
     // Used to create a clone of the given alarm
@@ -443,6 +461,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         this.wifiSsid = original.wifiSsid;
         this.wifiCondition = original.wifiCondition;
         this.wifiAction = original.wifiAction;
+        this.repeatIntervalMinutes = original.repeatIntervalMinutes;
+        this.repeatMaxCount = original.repeatMaxCount;
+        this.intervalFireCount = 0;
         final long now = System.currentTimeMillis();
         this.createdAt = now;
         this.updatedAt = now;
@@ -482,6 +503,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         wifiSsid = c.getString(WIFI_SSID_INDEX);
         wifiCondition = c.getString(WIFI_CONDITION_INDEX);
         wifiAction = c.getString(WIFI_ACTION_INDEX);
+        repeatIntervalMinutes = c.getInt(REPEAT_INTERVAL_MINUTES_INDEX);
+        repeatMaxCount = c.getInt(REPEAT_MAX_COUNT_INDEX);
+        intervalFireCount = c.getInt(INTERVAL_FIRE_COUNT_INDEX);
 
         if (c.getColumnCount() == ALARM_JOIN_INSTANCE_COLUMN_COUNT) {
             instanceState = c.getInt(INSTANCE_STATE_INDEX);
@@ -533,6 +557,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         wifiSsid = p.readString();
         wifiCondition = p.readString();
         wifiAction = p.readString();
+        repeatIntervalMinutes = p.readInt();
+        repeatMaxCount = p.readInt();
+        intervalFireCount = p.readInt();
     }
 
     public ContentValues createContentValues() {
@@ -573,6 +600,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         values.put(WIFI_SSID, wifiSsid);
         values.put(WIFI_CONDITION, wifiCondition);
         values.put(WIFI_ACTION, wifiAction);
+        values.put(REPEAT_INTERVAL_MINUTES, repeatIntervalMinutes);
+        values.put(REPEAT_MAX_COUNT, repeatMaxCount);
+        values.put(INTERVAL_FIRE_COUNT, intervalFireCount);
 
         if (alert == null) {
             // We want to put null, so default alarm changes
@@ -619,6 +649,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         p.writeString(wifiSsid);
         p.writeString(wifiCondition);
         p.writeString(wifiAction);
+        p.writeInt(repeatIntervalMinutes);
+        p.writeInt(repeatMaxCount);
+        p.writeInt(intervalFireCount);
     }
 
     public int describeContents() {
@@ -771,7 +804,28 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
     }
 
     public boolean isDeleteAfterUse() {
-        return !daysOfWeek.isRepeating() && deleteAfterUse;
+        return !isRecurring() && deleteAfterUse;
+    }
+
+    /**
+     * @return {@code true} if this alarm repeats on a fixed interval (hours/minutes).
+     */
+    public boolean isIntervalRepeating() {
+        return repeatIntervalMinutes > 0;
+    }
+
+    /**
+     * @return {@code true} if this alarm recurs via weekdays or an interval.
+     */
+    public boolean isRecurring() {
+        return daysOfWeek.isRepeating() || isIntervalRepeating();
+    }
+
+    /**
+     * @return {@code true} if the interval max has been reached and the alarm should stop.
+     */
+    public boolean hasReachedIntervalMax() {
+        return isIntervalRepeating() && repeatMaxCount > 0 && intervalFireCount >= repeatMaxCount;
     }
 
     public String getLabelOrDefault(Context context) {
@@ -846,7 +900,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
             || minutes != other.minutes
             || daysOfWeek.getBits() != other.daysOfWeek.getBits()
             || pauseStartDate != other.pauseStartDate
-            || pauseEndDate != other.pauseEndDate;
+            || pauseEndDate != other.pauseEndDate
+            || repeatIntervalMinutes != other.repeatIntervalMinutes
+            || repeatMaxCount != other.repeatMaxCount;
     }
 
     /**
@@ -1034,6 +1090,26 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
         final Calendar nextInstanceTime = Calendar.getInstance(currentTime.getTimeZone());
         nextInstanceTime.set(Calendar.SECOND, 0);
         nextInstanceTime.set(Calendar.MILLISECOND, 0);
+
+        if (isIntervalRepeating()) {
+            nextInstanceTime.setTimeInMillis(currentTime.getTimeInMillis());
+
+            // First fire uses the configured hour/minute. Subsequent fires advance by the interval
+            // from the reference time passed in (typically the previous fire time).
+            final Calendar firstOccurrence = Calendar.getInstance(currentTime.getTimeZone());
+            firstOccurrence.setTimeInMillis(currentTime.getTimeInMillis());
+            firstOccurrence.set(Calendar.SECOND, 0);
+            firstOccurrence.set(Calendar.MILLISECOND, 0);
+            firstOccurrence.set(Calendar.HOUR_OF_DAY, hour);
+            firstOccurrence.set(Calendar.MINUTE, minutes);
+
+            if (intervalFireCount == 0 && firstOccurrence.getTimeInMillis() > currentTime.getTimeInMillis()) {
+                return firstOccurrence;
+            }
+
+            nextInstanceTime.add(Calendar.MINUTE, Math.max(1, repeatIntervalMinutes));
+            return nextInstanceTime;
+        }
 
         if (daysOfWeek.isRepeating()) {
             nextInstanceTime.setTimeInMillis(currentTime.getTimeInMillis());
@@ -1233,6 +1309,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
             ", wifiSsid='" + wifiSsid + '\'' +
             ", wifiCondition='" + wifiCondition + '\'' +
             ", wifiAction='" + wifiAction + '\'' +
+            ", repeatIntervalMinutes=" + repeatIntervalMinutes +
+            ", repeatMaxCount=" + repeatMaxCount +
+            ", intervalFireCount=" + intervalFireCount +
             '}';
     }
 

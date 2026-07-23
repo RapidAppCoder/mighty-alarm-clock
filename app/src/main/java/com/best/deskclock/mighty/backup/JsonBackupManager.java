@@ -180,6 +180,9 @@ public final class JsonBackupManager {
             a.put("vibrate", alarm.vibrate);
             a.put("snoozeDuration", alarm.snoozeDuration);
             a.put("ringCount", alarm.ringCount);
+            a.put("repeatIntervalMinutes", alarm.repeatIntervalMinutes);
+            a.put("repeatMaxCount", alarm.repeatMaxCount);
+            a.put("intervalFireCount", alarm.intervalFireCount);
             a.put("createdAt", alarm.createdAt);
             a.put("updatedAt", alarm.updatedAt);
             alarmsArray.put(a);
