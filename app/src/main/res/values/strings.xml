@@ -8,7 +8,7 @@
     tools:ignore="MissingTranslation">
     <!-- Label shown on launcher icon -->
     <!-- Label for the application displayed on-screen when this application must be represented to the user. -->
-    <string name="app_label">Clock</string>
+    <string name="app_label">Mighty Alarm Clock</string>
     <!-- Default label to display for an alarm -->
     <string name="default_label">Alarm</string>
     <!-- Label title in the alarm editing panel to schedule alarm -->

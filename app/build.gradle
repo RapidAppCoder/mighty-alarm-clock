@@ -6,11 +6,11 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.best.deskclock"
+        applicationId = "de.huttersoft.mightyalarmclock"
         minSdk = 23
         targetSdk = 36
-        versionCode = 2035
-        versionName = '2.31'
+        versionCode = 10000
+        versionName = '1.0.0'
         ndk {
             abiFilters = ['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64']
         }
@@ -87,10 +87,10 @@ android {
             def outputFileName
 
             if (variant.buildType == "nightly") {
-                outputFileName = "Clock_${versionName}-nightly-${commitNumber}-${buildCommit}.apk"
+                outputFileName = "MightyAlarmClock_${versionName}-nightly-${commitNumber}-${buildCommit}.apk"
             } else {
                 def suffix = versionNameSuffix ?: (keystorePropertiesFile.exists() ? "-release" : "-unsigned")
-                outputFileName = "Clock_${versionName}${suffix}.apk"
+                outputFileName = "MightyAlarmClock_${versionName}${suffix}.apk"
             }
 
             variant.outputs.forEach { output ->

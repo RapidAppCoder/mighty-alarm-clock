@@ -1,0 +1,29 @@
+# Stub F-Droid metadata for Mighty Alarm Clock.
+# Submit a merge request to https://gitlab.com/fdroid/fdroiddata with this file
+# placed at metadata/de.huttersoft.mightyalarmclock.yml (adjust Repo/Commits as needed).
+
+Categories:
+  - Time
+License: GPL-3.0-only
+AuthorName: HutterSoft
+SourceCode: https://github.com/REPLACE_ME/mighty-alarm-clock
+IssueTracker: https://github.com/REPLACE_ME/mighty-alarm-clock/issues
+
+AutoName: Mighty Alarm Clock
+Name: Mighty Alarm Clock
+
+RepoType: git
+Repo: https://github.com/REPLACE_ME/mighty-alarm-clock
+
+Builds:
+  - versionName: 1.0.0
+    versionCode: 10000
+    commit: REPLACE_WITH_TAG_OR_COMMIT
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.0.0
+CurrentVersionCode: 10000

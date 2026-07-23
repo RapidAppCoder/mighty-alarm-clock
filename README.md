@@ -1,7 +1,8 @@
 <!--suppress CheckImageSize -->
-# <img width="24" height="24" alt="image" src="/fastlane/metadata/android/en-US/images/icon.png" /> Clock
-**Clock** is a customizable, privacy‑first, open-source clock app inspired by AOSP Clock.  
-It combines modern design, powerful features, and transparency — giving you full control over your time.
+# <img width="24" height="24" alt="image" src="/fastlane/metadata/android/en-US/images/icon.png" /> Mighty Alarm Clock
+**Mighty Alarm Clock** is a HutterSoft fork of [Clock](https://github.com/BlackyHawky/Clock) (AOSP-inspired), focused on richer alarm management: tags, filters, Syncthing-friendly sync/handoff, Wi‑Fi rules, and more.
+
+Application ID: `de.huttersoft.mightyalarmclock` (installs side-by-side with the upstream Clock app).
 
 # 📑 Table of Contents
 
@@ -15,18 +16,16 @@ It combines modern design, powerful features, and transparency — giving you fu
 
 # 📥 Download
 
-[<img src="/images/badge_github.png" alt="Get it on GitHub" height="80">](https://github.com/BlackyHawky/Clock/releases)
-[<img src="/images/badge_f-droid.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/com.best.deskclock/)
-[<img src="/images/badge_izzy_on_droid.png" alt="Get it on IzzyOnDroid" height="80">](https://apt.izzysoft.de/fdroid/index/apk/com.best.deskclock/)
-[<img src="/images/badge_obtainium.png" alt="Get it on Obtainium" height="80">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/BlackyHawky/Clock/releases)
+Fork builds are not yet published on F-Droid. Build from source or use local APKs.
 
 > [!NOTE]  
 > **Build variants:**
-> - **Release:** Stable versions recommended for everyday use (available on all platforms above).
-> - **Nightly:** Experimental builds with the latest changes, may be unstable (available on GitHub, and also on Obtainium if you enable _"Include prereleases"_).
-> - **Debug:** Developer-oriented builds with extra logging and diagnostics (available only on GitHub).
+> - **Release:** Stable versions recommended for everyday use.
+> - **Nightly:** Experimental builds with the latest changes.
+> - **Debug:** Developer-oriented builds with extra logging and diagnostics.
 >
 > All variants (Release, Nightly, Debug) can be installed side by side without conflict.
+> This fork also installs side by side with upstream `com.best.deskclock`.
 
 # ✨ Features
 

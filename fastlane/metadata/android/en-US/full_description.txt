@@ -1,33 +1,39 @@
-Clock is a privacy-conscious open-source clock, based on AOSP.
-Does not use internet permission, and thus is 100% offline.
+Mighty Alarm Clock (de.huttersoft.mightyalarmclock) is a fork of BlackyHawky's Clock, itself
+based on AOSP, released under the GNU General Public License v3.0 (GPL-3.0).
 
-Features:
+Does not use the internet permission, and thus is 100% offline.
+
+On top of everything the original Clock app offers, Mighty Alarm Clock adds:
+<ul>
+  <li>A fire queue so multiple alarms firing close together are presented one after another instead of being marked missed;</li>
+  <li>Progressive snooze (each snooze can automatically get longer) plus a manual snooze duration picker;</li>
+  <li>Global mute: silence or vibrate-only every alarm until a chosen time;</li>
+  <li>Naming a new alarm right when it's created;</li>
+  <li>Searching, filtering and extra sorting options for the alarm list;</li>
+  <li>Tags with their own ringtone, automatically used by alarms that don't set one explicitly;</li>
+  <li>Device-wide alarm statistics with a shareable event log;</li>
+  <li>Wi-Fi based rules to automatically enable/disable alarms depending on the connected network;</li>
+  <li>Plain JSON backups (no ZIP) to a folder of your choice, with optional scheduled backups;</li>
+  <li>An experimental "exchange" mechanism to move or share alarms between devices via a shared folder;</li>
+  <li>A small rotatable timezone globe on the clock screen showing your selected world cities;</li>
+</ul>
+
+...and the full original Clock feature set:
 <ul>
   <li>Set the alarms to a specific date;</li>
   <li>Flip and shake action to dismiss/postpone alarm;</li>
   <li>Turn off/postpone the alarm with the power button or volume buttons;</li>
-  <li>For some Snapdragon devices only, the alarm is triggered when they are switched off</li>
-    <ul>
-      <li>Unfortunately, this feature may not work on some devices despite the presence of the <i>"com.qualcomm.qti.poweroffalarm"</i> system app.</li>
-    </ul>
   <li>Swipe to delete an alarm;</li>
   <li>Duplicate alarms;</li>
-  <li>Customizable alarm title;</li>
-  <li>Customizable ringtone;</li>
-  <li>Ability to play ringtones randomly;</li>
-  <li>Light, dark or system theme;</li>
-  <li>AMOLED mode for dark theme;</li>
+  <li>Customizable alarm title and ringtone;</li>
+  <li>Light, dark or system theme, with AMOLED mode;</li>
   <li>Customizable interface;</li>
   <li>Digital or analog clock style;</li>
-  <li>Display home time when traveling;</li>
-  <li>Display the time in many cities around the world;</li>
+  <li>Display home time when traveling, and the time in many cities around the world;</li>
   <li>Timer and stopwatch included;</li>
-  <li>Possibility of sharing your stopwatch with your contacts;</li>
   <li>Customizable screensaver;</li>
-  <li>Modern widgets;</li>
-  <li>Customizable widgets;</li>
+  <li>Modern, customizable widgets;</li>
   <li>Support for tiles in quick settings (for Android 7+);</li>
-  <li>Backup and restore application data (except custom ringtones);</li>
-  <li>Material design;</li>
-  <li>Dynamic colors for Android 12+;</li>
+  <li>Backup and restore application data;</li>
+  <li>Material design with dynamic colors for Android 12+;</li>
 </ul>
