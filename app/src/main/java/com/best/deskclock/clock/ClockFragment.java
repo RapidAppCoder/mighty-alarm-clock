@@ -82,7 +82,7 @@ public final class ClockFragment extends DeskClockFragment {
             switch (key) {
                 case KEY_CLOCK_STYLE, KEY_CLOCK_DIAL, KEY_CLOCK_DIAL_MATERIAL, KEY_ANALOG_CLOCK_SIZE, KEY_DISPLAY_CLOCK_SECONDS,
                      KEY_CLOCK_SECOND_HAND, KEY_DIGITAL_CLOCK_FONT, KEY_DIGITAL_CLOCK_FONT_SIZE, KEY_DISPLAY_TEXT_UPPERCASE,
-                     KEY_SORT_CITIES, KEY_ENABLE_CITY_NOTE, KEY_AUTO_HOME_CLOCK, KEY_HOME_TIME_ZONE -> {
+                     KEY_SORT_CITIES, KEY_ENABLE_CITY_NOTE, KEY_AUTO_HOME_CLOCK, KEY_HOME_TIME_ZONE, KEY_DISPLAY_TIMEZONE_GLOBE -> {
 
                     mAreSettingsChanged = true;
 
@@ -102,6 +102,7 @@ public final class ClockFragment extends DeskClockFragment {
     private boolean mIsPortrait;
     private boolean mIsTablet;
     private boolean mHasBlackAccentColor;
+    private boolean mShowTimezoneGlobe;
 
     /**
      * The public no-arg constructor required by all fragments.
@@ -199,6 +200,8 @@ public final class ClockFragment extends DeskClockFragment {
             requireContext(), mPrefs, mSelectedCities, mHasBlackAccentColor, regularTypeface, boldTypeface, mSettings);
 
         mBinding.cityRecyclerView.setAdapter(mCityAdapter);
+
+        updateTimezoneGlobe();
 
         DataModel.getDataModel().addCityListener(mCityAdapter);
 
@@ -360,6 +363,23 @@ public final class ClockFragment extends DeskClockFragment {
         mSettings.citySorting = SettingsDAO.getCitySorting(mPrefs);
 
         mIsDigitalClock = mSettings.clockStyle == DataModel.ClockStyle.DIGITAL;
+
+        mShowTimezoneGlobe = mPrefs.getBoolean(KEY_DISPLAY_TIMEZONE_GLOBE, false);
+    }
+
+    /**
+     * Shows/hides the {@link com.best.deskclock.mighty.globe.TimezoneGlobeView} and feeds it the
+     * currently selected cities, based on the "Display timezone globe" preference.
+     */
+    private void updateTimezoneGlobe() {
+        if (mBinding == null || mBinding.timezoneGlobeView == null) {
+            return;
+        }
+
+        mBinding.timezoneGlobeView.setVisibility(mShowTimezoneGlobe ? VISIBLE : GONE);
+        if (mShowTimezoneGlobe) {
+            mBinding.timezoneGlobeView.setCities(mSelectedCities);
+        }
     }
 
     private void updateMainClock() {
@@ -411,6 +431,8 @@ public final class ClockFragment extends DeskClockFragment {
             mTouchHelperCallback.setShowHomeClock(mSettings.showHomeClock);
             updateDragAndDrop();
         }
+
+        updateTimezoneGlobe();
 
         mAreSettingsChanged = false;
     }
