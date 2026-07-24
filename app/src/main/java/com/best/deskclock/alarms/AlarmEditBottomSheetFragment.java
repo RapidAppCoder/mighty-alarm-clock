@@ -110,9 +110,11 @@ import com.google.android.material.timepicker.MaterialTimePicker;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TimeZone;
 
 public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
@@ -1033,22 +1035,36 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
     }
 
     private void showAssignTagsDialog(TextView summary) {
+        showAssignTagsDialog(summary, null);
+    }
+
+    /**
+     * @param pendingCheckedIds if non-null, restores checkbox state (e.g. after creating a tag);
+     *                          otherwise loads current associations from the database
+     */
+    private void showAssignTagsDialog(TextView summary, Set<Long> pendingCheckedIds) {
         if (mAlarm == null || mAlarm.id == Alarm.INVALID_ID) {
             return;
         }
         final ContentResolver cr = requireContext().getContentResolver();
         final List<Tag> allTags = Tag.getTags(cr);
         if (allTags.isEmpty()) {
-            CustomToast.show(requireContext(), R.string.mighty_tags_create_first);
+            showCreateTagFromAssignDialog(summary, new HashSet<>());
             return;
         }
+
+        final Set<Long> assigned = pendingCheckedIds != null
+            ? pendingCheckedIds
+            : new HashSet<>(Tag.getTagIdsForAlarm(cr, mAlarm.id));
         final CharSequence[] names = new CharSequence[allTags.size()];
         final boolean[] checked = new boolean[allTags.size()];
-        final List<Long> assigned = Tag.getTagIdsForAlarm(cr, mAlarm.id);
         for (int i = 0; i < allTags.size(); i++) {
-            names[i] = allTags.get(i).name;
-            checked[i] = assigned.contains(allTags.get(i).id);
+            final Tag tag = allTags.get(i);
+            final int usageCount = Tag.getAlarmCountForTag(cr, tag.id);
+            names[i] = getString(R.string.mighty_tags_with_count, tag.name, usageCount);
+            checked[i] = assigned.contains(tag.id);
         }
+
         new MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.mighty_tags_assign_title)
             .setMultiChoiceItems(names, checked, (dialog, which, isChecked) -> checked[which] = isChecked)
@@ -1061,7 +1077,48 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
                 }
                 refreshTagSummary(summary);
             })
+            .setNeutralButton(R.string.mighty_tags_add, (dialog, which) -> {
+                final Set<Long> pending = new HashSet<>();
+                for (int i = 0; i < allTags.size(); i++) {
+                    if (checked[i]) {
+                        pending.add(allTags.get(i).id);
+                    }
+                }
+                showCreateTagFromAssignDialog(summary, pending);
+            })
             .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    private void showCreateTagFromAssignDialog(TextView summary, Set<Long> pendingCheckedIds) {
+        final Context context = requireContext();
+        final EditText input = new EditText(context);
+        input.setHint(R.string.mighty_tags_add_hint);
+        final int padding = (int) dpToPx(20, mDisplayMetrics);
+        input.setPadding(padding, padding, padding, padding);
+
+        new MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.mighty_tags_add_title)
+            .setView(input)
+            .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                final String name = input.getText() != null ? input.getText().toString().trim() : "";
+                if (name.isEmpty()) {
+                    showAssignTagsDialog(summary, pendingCheckedIds);
+                    return;
+                }
+                final Tag tag = new Tag(name, 0);
+                tag.addTag(context.getContentResolver());
+                pendingCheckedIds.add(tag.id);
+                CustomToast.show(context, R.string.mighty_tags_created);
+                showAssignTagsDialog(summary, pendingCheckedIds);
+            })
+            .setNegativeButton(android.R.string.cancel, (dialog, which) -> {
+                // Only reopen assign if tags exist (avoids looping when the list is still empty).
+                if (!Tag.getTags(context.getContentResolver()).isEmpty()) {
+                    showAssignTagsDialog(summary,
+                        pendingCheckedIds.isEmpty() ? null : pendingCheckedIds);
+                }
+            })
             .show();
     }
 

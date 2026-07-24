@@ -335,7 +335,7 @@ public class MightyFeaturesFragment extends ScreenFragment
                 }
                 final Intent shareIntent = new Intent(Intent.ACTION_SEND);
                 shareIntent.setType("text/plain");
-                shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Mighty Alarm Clock event log");
+                shareIntent.putExtra(Intent.EXTRA_SUBJECT, "AlarmClock Deluxe (Wecker) event log");
                 shareIntent.putExtra(Intent.EXTRA_TEXT, csv);
                 startActivity(Intent.createChooser(shareIntent, getString(R.string.mighty_export_event_log)));
             });

@@ -84,7 +84,7 @@
 
     <!-- Label names for Debug mode. -->
     <!-- App title for the debug version. -->
-    <string name="app_label_debug">Mighty Alarm Clock debug</string>
+    <string name="app_label_debug">AlarmClock Deluxe (Wecker) debug</string>
     <!-- Settings title for the debug version. -->
     <string name="setting_debug_title">Settings debug version</string>
     <string name="debug_category_title">Debug</string>
@@ -99,7 +99,7 @@
 
     <!-- Label names for Nightly mode. -->
     <!-- App title for the nightly version. -->
-    <string name="app_label_nightly">Mighty Alarm Clock nightly</string>
+    <string name="app_label_nightly">AlarmClock Deluxe (Wecker) nightly</string>
     <!-- Settings title for the nightly version. -->
     <string name="setting_nightly_title">Settings nightly version</string>
 
@@ -705,6 +705,7 @@
         <item>@string/mighty_sort_by_ring_count</item>
         <item>@string/mighty_sort_by_created_date</item>
         <item>@string/mighty_sort_by_updated_date</item>
+        <item>@string/mighty_sort_by_next_alarm</item>
     </string-array>
 
     <!-- Entries for the JSON backup interval ListPreference -->

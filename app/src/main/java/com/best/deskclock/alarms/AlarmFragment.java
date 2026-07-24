@@ -164,7 +164,7 @@ public final class AlarmFragment extends DeskClockFragment
     private boolean mFilterEnabledOnly = false;
     private boolean mFilterRepeatingOnly = false;
     private boolean mFilterOneShotOnly = false;
-    private int mExtraSortMode = 0; // 0=default, 1=ring count desc, 2=created desc, 3=updated desc
+    private int mExtraSortMode = 0; // 0=default, 1=ring count desc, 2=created desc, 3=updated desc, 4=next alarm time asc
     /** Spinner sentinel: show every alarm regardless of tags. */
     private static final long FILTER_TAG_ALL = Tag.INVALID_ID;
     /** Spinner sentinel: show only alarms that have no tags assigned. */
@@ -517,6 +517,12 @@ public final class AlarmFragment extends DeskClockFragment
             case 1 -> filtered.sort((a, b) -> Integer.compare(b.item.ringCount, a.item.ringCount));
             case 2 -> filtered.sort((a, b) -> Long.compare(b.item.createdAt, a.item.createdAt));
             case 3 -> filtered.sort((a, b) -> Long.compare(b.item.updatedAt, a.item.updatedAt));
+            case 4 -> {
+                final Calendar now = Calendar.getInstance();
+                filtered.sort((a, b) -> Long.compare(
+                    a.item.getSortableNextAlarmTime(a.getAlarmInstance(), now).getTimeInMillis(),
+                    b.item.getSortableNextAlarmTime(b.getAlarmInstance(), now).getTimeInMillis()));
+            }
             default -> {
                 // Keep the order computed in onLoadFinished (respects the user's alarm sort preference).
             }

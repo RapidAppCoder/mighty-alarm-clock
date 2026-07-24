@@ -8,7 +8,7 @@
     tools:ignore="MissingTranslation">
     <!-- Label shown on launcher icon -->
     <!-- Label for the application displayed on-screen when this application must be represented to the user. -->
-    <string name="app_label">Mighty Alarm Clock</string>
+    <string name="app_label">AlarmClock Deluxe (Wecker)</string>
     <!-- Default label to display for an alarm -->
     <string name="default_label">Alarm</string>
     <!-- Label title in the alarm editing panel to schedule alarm -->
@@ -1537,6 +1537,7 @@
     <string name="mighty_tags_section_title">Tags</string>
     <string name="mighty_tags_edit_button">Assign tags</string>
     <string name="mighty_tags_none">No tags</string>
+    <string name="mighty_tags_with_count">%1$s (%2$d)</string>
     <string name="mighty_tags_assign_title">Assign tags</string>
     <string name="mighty_tags_create_first">Create tags first under Settings → Mighty features</string>
     <string name="mighty_manage_tags_title">Manage tags</string>
@@ -1554,6 +1555,7 @@
     <string name="mighty_sort_by_ring_count">Sort: ring count</string>
     <string name="mighty_sort_by_created_date">Sort: date created</string>
     <string name="mighty_sort_by_updated_date">Sort: date updated</string>
+    <string name="mighty_sort_by_next_alarm">Sort: next to ring</string>
 
     <!-- JSON backup interval options -->
     <string name="mighty_backup_interval_6h">Every 6 hours</string>

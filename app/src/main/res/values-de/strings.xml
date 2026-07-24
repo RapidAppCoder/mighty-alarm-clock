@@ -4,7 +4,7 @@
     modified
     SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
 --><resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_label" msgid="6674495003718166674">"Mighty Alarm Clock"</string>
+    <string name="app_label" msgid="6674495003718166674">AlarmClock Deluxe (Wecker)</string>
     <string name="default_label" msgid="5590025289805630372">Wecker</string>
     <string name="alarm_vibrate" msgid="3476686921490362230">"Vibrieren"</string>
     <string name="time_picker_dialog_title">Weckzeit auswählen</string>
@@ -732,6 +732,7 @@
     <string name="mighty_tags_edit_button">Tags zuweisen</string>
     <string name="mighty_tags_none">Keine Tags</string>
     <string name="mighty_tags_assign_title">Tags zuweisen</string>
+    <string name="mighty_tags_with_count">%1$s (%2$d)</string>
     <string name="mighty_tags_create_first">Legen Sie zuerst Tags unter Einstellungen → Mighty-Funktionen an</string>
     <string name="mighty_manage_tags_title">Tags verwalten</string>
     <string name="mighty_manage_tags_summary">Wecker-Tags erstellen oder löschen</string>
@@ -747,6 +748,7 @@
     <string name="mighty_sort_by_ring_count">Sortieren: Klingelanzahl</string>
     <string name="mighty_sort_by_created_date">Sortieren: Erstellungsdatum</string>
     <string name="mighty_sort_by_updated_date">Sortieren: Änderungsdatum</string>
+    <string name="mighty_sort_by_next_alarm">Sortieren: Nächster Klingeltermin</string>
 
     <string name="mighty_backup_interval_6h">Alle 6 Stunden</string>
     <string name="mighty_backup_interval_12h">Alle 12 Stunden</string>

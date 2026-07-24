@@ -235,6 +235,13 @@ public final class Tag implements ClockContract.TagsColumns {
     }
 
     /**
+     * @return how many alarms are currently associated with the given tag.
+     */
+    public static int getAlarmCountForTag(ContentResolver contentResolver, long tagId) {
+        return getAlarmIdsForTag(contentResolver, tagId).size();
+    }
+
+    /**
      * @return the distinct ids of every alarm that has at least one tag assigned.
      */
     public static List<Long> getAlarmIdsWithAnyTag(ContentResolver contentResolver) {
