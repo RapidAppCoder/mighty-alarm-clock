@@ -8,10 +8,12 @@ package com.best.deskclock.data;
 
 import static android.text.format.DateUtils.HOUR_IN_MILLIS;
 import static android.text.format.DateUtils.MINUTE_IN_MILLIS;
+import static com.best.deskclock.data.DataModel.PowerButtonBehavior.DISABLE;
 import static com.best.deskclock.data.DataModel.PowerButtonBehavior.DISMISS;
 import static com.best.deskclock.data.DataModel.PowerButtonBehavior.NOTHING;
 import static com.best.deskclock.data.DataModel.PowerButtonBehavior.SNOOZE;
 import static com.best.deskclock.data.DataModel.VolumeButtonBehavior.CHANGE_VOLUME;
+import static com.best.deskclock.data.DataModel.VolumeButtonBehavior.DISABLE_ALARM;
 import static com.best.deskclock.data.DataModel.VolumeButtonBehavior.DISMISS_ALARM;
 import static com.best.deskclock.data.DataModel.VolumeButtonBehavior.DO_NOTHING;
 import static com.best.deskclock.data.DataModel.VolumeButtonBehavior.SNOOZE_ALARM;
@@ -1079,6 +1081,7 @@ public final class SettingsDAO {
             case VOLUME_BEHAVIOR_CHANGE_VOLUME -> CHANGE_VOLUME;
             case VOLUME_BEHAVIOR_SNOOZE -> SNOOZE_ALARM;
             case VOLUME_BEHAVIOR_DISMISS -> DISMISS_ALARM;
+            case VOLUME_BEHAVIOR_DISABLE -> DISABLE_ALARM;
             default -> throw new IllegalArgumentException("Unknown volume button behavior: " + value);
         };
     }
@@ -1093,6 +1096,7 @@ public final class SettingsDAO {
             case DEFAULT_POWER_BEHAVIOR -> NOTHING;
             case POWER_BEHAVIOR_SNOOZE -> SNOOZE;
             case POWER_BEHAVIOR_DISMISS -> DISMISS;
+            case POWER_BEHAVIOR_DISABLE -> DISABLE;
             default -> throw new IllegalArgumentException("Unknown power button behavior: " + value);
         };
     }

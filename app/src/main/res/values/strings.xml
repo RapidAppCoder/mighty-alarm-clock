@@ -97,6 +97,8 @@
     <string name="alarm_scheduled_for">Scheduled for %s</string>
     <!-- Button label on the alarm notification panel: Dismiss -->
     <string name="alarm_alert_dismiss_text">Dismiss</string>
+    <!-- Notification action to permanently disable a repeating alarm. -->
+    <string name="alarm_alert_disable_text">Turn off permanently</string>
     <!-- Button label on the alarm notification panel: Dismiss & Delete -->
     <string name="alarm_alert_dismiss_and_delete_text">Dismiss &amp; Delete</string>
     <!-- Button label on the alarm editing panel: Dismiss & Delete -->
@@ -113,6 +115,8 @@
     <string name="alarm_alert_snoozed_text">Snoozed</string>
     <!-- The text shown after user dismissed a repeated alarm -->
     <string name="alarm_alert_off_text">Alarm off</string>
+    <!-- Text displayed while a repeating alarm is being permanently disabled -->
+    <string name="alarm_alert_disabled_text">Alarm turned off permanently</string>
     <!-- The text shown after user dismissed a single alarm -->
     <string name="alarm_alert_off_and_deleted_text">Alarm off and deleted</string>
     <!-- Button labels on the alarm dialog: Snooze -->
@@ -640,6 +644,8 @@
     <string name="button_action_snooze">Snooze</string>
     <!-- Setting title for changing the button action to Dismiss. -->
     <string name="button_action_dismiss">Dismiss</string>
+    <!-- Setting title for permanently disabling a repeating alarm when dismissing. -->
+    <string name="button_action_disable">Turn off permanently</string>
     <!-- Setting title for changing the button action to Control volume. -->
     <string name="button_action_control_volume">Control volume</string>
     <!-- Setting title for changing the button action to Nothing. -->
@@ -988,9 +994,13 @@
     <string name="stopwatch_service_desc">Processes actions from stopwatch notifications.</string>
     <!-- Description for the paused stop watch -->
     <string name="swn_paused">Paused</string>
+    <!-- Hint under the slide control for permanently disabling a repeating alarm. -->
+    <string name="swipe_down_to_disable_hint">Swipe down to turn off permanently</string>
     <!-- Text instruction for alarm icon on alarm lock screen when swipe action is enabled.
          The snooze button will still be on the left even on RTL languages so please do not reverse this during translation. -->
     <string name="description_direction_both">Swipe left to snooze or right to dismiss</string>
+    <!-- Accessibility: swipe left/right/down for recurring alarms. -->
+    <string name="description_direction_both_with_disable">Swipe left to snooze, right to dismiss, or down to turn off permanently</string>
     <!-- Text instruction for occasional alarm icon on alarm lock screen when swipe action is enabled.
          The snooze button will still be on the left even on RTL languages so please do not reverse this during translation. -->
     <string name="description_direction_both_for_occasional_alarm">Swipe left to snooze or right to dismiss and delete alarm</string>
@@ -1002,6 +1012,8 @@
     <string name="description_snooze_button">Click to snooze alarm</string>
     <!-- Text instruction for the "Dismiss" button on alarm lock screen when swipe action is disabled. -->
     <string name="description_dismiss_button">Click to dismiss alarm</string>
+    <!-- Text instruction for the "Dismiss" button on a repeating alarm: tap dismisses once, long-press disables. -->
+    <string name="description_dismiss_button_with_disable">Click to dismiss; long-press to turn off permanently</string>
     <!-- Text instruction for the "Dismiss" button on alarm lock screen for occasional alarm when swipe action is disabled. -->
     <string name="description_dismiss_button_for_occasional_alarm">Click to dismiss and delete alarm</string>
     <!-- Timer preference title in the settings -->
@@ -1221,6 +1233,8 @@
     [CHAR LIMIT=NONE]
     -->
     <string name="alarm_is_dismissed"><xliff:g example="14:20" id="alarm_time">%s</xliff:g> alarm dismissed</string>
+    <!-- Toast when a repeating alarm was permanently disabled while dismissing. %s is the alarm time. -->
+    <string name="alarm_is_disabled"><xliff:g example="14:20" id="alarm_time">%s</xliff:g> alarm turned off permanently</string>
     <!-- String that represents that the user has dismissed a repetitive alarm. %s indicates the day of the next alarm -->
     <string name="repetitive_alarm_is_dismissed">Alarm dismissed. <xliff:g example="Next alarm Monday." id="alarm_day">Rescheduled for %s.</xliff:g></string>
     <!-- Toast content when an occasional alarm is dismissed and deleted.

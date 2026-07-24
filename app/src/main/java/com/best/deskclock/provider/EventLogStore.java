@@ -26,6 +26,7 @@ public final class EventLogStore implements ClockContract.EventLogColumns {
     public static final String EVENT_ALARM_DELETED = "ALARM_DELETED";
     public static final String EVENT_ALARM_FIRED = "ALARM_FIRED";
     public static final String EVENT_ALARM_DISMISSED = "ALARM_DISMISSED";
+    public static final String EVENT_ALARM_DISABLED = "ALARM_DISABLED";
     public static final String EVENT_ALARM_SNOOZED = "ALARM_SNOOZED";
     public static final String EVENT_ALARM_MISSED = "ALARM_MISSED";
 

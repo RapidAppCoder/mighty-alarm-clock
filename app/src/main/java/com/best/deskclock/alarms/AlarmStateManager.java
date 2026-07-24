@@ -104,8 +104,9 @@ public final class AlarmStateManager extends BroadcastReceiver {
     // Extra key to indicate the state change was launched from a notification.
     public static final String FROM_NOTIFICATION_EXTRA = "intent.extra.from.notification";
 
-    // Intent category tags used to dismiss or snooze an alarm
+    // Intent category tags used to dismiss, disable or snooze an alarm
     public static final String ALARM_DISMISS_TAG = "DISMISS_TAG";
+    public static final String ALARM_DISABLE_TAG = "DISABLE_TAG";
     public static final String ALARM_SNOOZE_TAG = "SNOOZE_TAG";
 
     public static final String ACTION_DISMISS_MISSED_ALARM = "dismiss_missed_alarm";
@@ -748,6 +749,41 @@ public final class AlarmStateManager extends BroadcastReceiver {
     }
 
     /**
+     * Stops the firing instance and permanently disables the parent repeating alarm without
+     * scheduling a next occurrence. Non-recurring alarms fall back to
+     * {@link #deleteInstanceAndUpdateParent}.
+     *
+     * @param context   application context
+     * @param instance  firing or snoozed instance to retire
+     * @param showToast whether to show a toast confirming the alarm was turned off
+     */
+    public static void deleteInstanceAndDisableParent(Context context, AlarmInstance instance,
+                                                      boolean showToast) {
+        final ContentResolver contentResolver = context.getContentResolver();
+        Alarm alarm = Alarm.getAlarm(contentResolver, instance.mAlarmId);
+
+        if (alarm == null || !alarm.isRecurring()) {
+            deleteInstanceAndUpdateParent(context, instance, showToast);
+            return;
+        }
+
+        LogUtils.i("Deleting instance " + instance.mId + " and disabling parent alarm " + alarm.id);
+
+        alarm.enabled = false;
+        alarm.updateAlarm(contentResolver);
+
+        EventLogStore.logEvent(contentResolver, EventLogStore.EVENT_ALARM_DISABLED,
+            alarm.stableUuid, instance.mLabel, "instanceId=" + instance.mId);
+
+        if (showToast) {
+            AppExecutors.getMainThread().post(() -> AlarmUtils.showDisableToast(context, alarm, instance));
+        }
+
+        // Retire every scheduled occurrence; the parent stays disabled.
+        deleteAllInstances(context, alarm.id);
+    }
+
+    /**
      * This will set the instance state to DISMISSED_STATE and remove its notifications and
      * alarm timers.
      *
@@ -988,22 +1024,29 @@ public final class AlarmStateManager extends BroadcastReceiver {
             int alarmState = intent.getIntExtra(ALARM_STATE_EXTRA, -1);
             if (intentId != globalId) {
                 LogUtils.i("IntentId: " + intentId + " GlobalId: " + globalId + " AlarmState: " + alarmState);
-                // Allows to dismiss/snooze requests to go through
-                if (!intent.hasCategory(ALARM_DISMISS_TAG) && !intent.hasCategory(ALARM_SNOOZE_TAG)) {
+                // Allows to dismiss/disable/snooze requests to go through
+                if (!intent.hasCategory(ALARM_DISMISS_TAG)
+                    && !intent.hasCategory(ALARM_DISABLE_TAG)
+                    && !intent.hasCategory(ALARM_SNOOZE_TAG)) {
                     LogUtils.i("Ignoring old Intent");
                     return;
                 }
             }
 
             if (intent.getBooleanExtra(FROM_NOTIFICATION_EXTRA, false)) {
-                if (intent.hasCategory(ALARM_DISMISS_TAG)) {
+                if (intent.hasCategory(ALARM_DISABLE_TAG)) {
+                    Events.sendAlarmEvent(R.string.action_disable, R.string.label_notification);
+                } else if (intent.hasCategory(ALARM_DISMISS_TAG)) {
                     Events.sendAlarmEvent(R.string.action_dismiss, R.string.label_notification);
                 } else if (intent.hasCategory(ALARM_SNOOZE_TAG)) {
                     Events.sendAlarmEvent(R.string.action_snooze, R.string.label_notification);
                 }
             }
 
-            if (alarmState >= 0) {
+            if (intent.hasCategory(ALARM_DISABLE_TAG)) {
+                deleteInstanceAndDisableParent(context, instance, true);
+                AlarmVisualCache.cacheDismissedAlarm(instance.mAlarmId);
+            } else if (alarmState >= 0) {
                 setAlarmState(context, instance, alarmState);
 
                 if (alarmState == AlarmInstance.PREDISMISSED_STATE || alarmState == AlarmInstance.DISMISSED_STATE) {

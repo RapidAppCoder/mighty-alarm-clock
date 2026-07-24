@@ -71,6 +71,12 @@ public class AlarmService extends Service {
     public static final String ALARM_DISMISS_ACTION = "com.best.deskclock.ALARM_DISMISS";
 
     /**
+     * AlarmActivity and AlarmService listen for this broadcast intent so that other
+     * applications can permanently disable a repeating alarm while it is firing.
+     */
+    public static final String ALARM_DISABLE_ACTION = "com.best.deskclock.ALARM_DISABLE";
+
+    /**
      * A private action sent by AlarmService when the alarm has started.
      */
     private static final String ALARM_ALERT_ACTION = "com.best.deskclock.ALARM_ALERT";
@@ -109,6 +115,11 @@ public class AlarmService extends Service {
      * Constant for Dismiss
      */
     private static final int ALARM_DISMISS = 2;
+
+    /**
+     * Constant for permanently disabling a repeating alarm
+     */
+    private static final int ALARM_DISABLE = 3;
 
     /**
      * Binder given to AlarmActivity.
@@ -166,6 +177,10 @@ public class AlarmService extends Service {
                         // Set the alarm state to dismissed.
                         AlarmStateManager.deleteInstanceAndUpdateParent(context, mCurrentAlarm, true);
                         Events.sendAlarmEvent(R.string.action_dismiss, R.string.label_intent);
+                    }
+                    case ALARM_DISABLE_ACTION -> {
+                        AlarmStateManager.deleteInstanceAndDisableParent(context, mCurrentAlarm, true);
+                        Events.sendAlarmEvent(R.string.action_disable, R.string.label_intent);
                     }
                 }
             }
@@ -323,6 +338,7 @@ public class AlarmService extends Service {
         // Register the broadcast receiver
         final IntentFilter filter = new IntentFilter(ALARM_SNOOZE_ACTION);
         filter.addAction(ALARM_DISMISS_ACTION);
+        filter.addAction(ALARM_DISABLE_ACTION);
         if (SdkUtils.isAtLeastAndroid13()) {
             registerReceiver(mActionsReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
@@ -741,6 +757,17 @@ public class AlarmService extends Service {
         } else if (action == ALARM_DISMISS) { // Setup Dismiss Action
             startService(AlarmStateManager.createStateChangeIntent(
                 this, AlarmStateManager.ALARM_DISMISS_TAG, mCurrentAlarm, AlarmInstance.DISMISSED_STATE));
+        } else if (action == ALARM_DISABLE) {
+            final Alarm alarm = mCurrentAlarm == null
+                ? null
+                : Alarm.getAlarm(getContentResolver(), mCurrentAlarm.mAlarmId);
+            if (alarm != null && alarm.isRecurring()) {
+                startService(AlarmStateManager.createStateChangeIntent(
+                    this, AlarmStateManager.ALARM_DISABLE_TAG, mCurrentAlarm, AlarmInstance.DISMISSED_STATE));
+            } else {
+                startService(AlarmStateManager.createStateChangeIntent(
+                    this, AlarmStateManager.ALARM_DISMISS_TAG, mCurrentAlarm, AlarmInstance.DISMISSED_STATE));
+            }
         }
     }
 

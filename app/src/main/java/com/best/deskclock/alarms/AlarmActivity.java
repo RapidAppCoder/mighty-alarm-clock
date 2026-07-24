@@ -143,6 +143,7 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
     private Animator mTranslationAnimator;
     private int mInitialPointerIndex = MotionEvent.INVALID_POINTER_ID;
     private float mInitialTouchX = 0;
+    private float mInitialTouchY = 0;
 
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
@@ -155,6 +156,7 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
                     switch (action) {
                         case AlarmService.ALARM_SNOOZE_ACTION -> snooze();
                         case AlarmService.ALARM_DISMISS_ACTION -> dismiss();
+                        case AlarmService.ALARM_DISABLE_ACTION -> dismissAndDisable();
                         case AlarmService.ALARM_DONE_ACTION -> finish();
                         default -> LOGGER.i("Unknown broadcast: %s", action);
                     }
@@ -185,6 +187,8 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
                         snooze();
                     } else if (mPowerBehavior == PowerButtonBehavior.DISMISS) {
                         dismiss();
+                    } else if (mPowerBehavior == PowerButtonBehavior.DISABLE) {
+                        dismissAndDisable();
                     }
                 }
             }
@@ -321,6 +325,7 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
             final IntentFilter filter = new IntentFilter(AlarmService.ALARM_DONE_ACTION);
             filter.addAction(AlarmService.ALARM_SNOOZE_ACTION);
             filter.addAction(AlarmService.ALARM_DISMISS_ACTION);
+            filter.addAction(AlarmService.ALARM_DISABLE_ACTION);
             if (SdkUtils.isAtLeastAndroid13()) {
                 registerReceiver(mReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
             } else {
@@ -392,6 +397,12 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
                             }
                             return true;
                         }
+                        case DISABLE_ALARM -> {
+                            if (keyEvent.getAction() == KeyEvent.ACTION_UP) {
+                                dismissAndDisable();
+                            }
+                            return true;
+                        }
                     }
                 }
         }
@@ -456,6 +467,7 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
         }
 
         final int action = event.getActionMasked();
+        final boolean canDisable = canPermanentlyDisableAlarm();
 
         if (action == MotionEvent.ACTION_DOWN) {
             LOGGER.v("onTouch started: %s", event);
@@ -472,6 +484,7 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
             mBinding.contentView.getLocationOnScreen(contentLocation);
 
             mInitialTouchX = event.getRawX() - contentLocation[0];
+            mInitialTouchY = event.getRawY() - contentLocation[1];
         } else if (action == MotionEvent.ACTION_CANCEL) {
             LOGGER.v("onTouch canceled: %s", event);
 
@@ -493,38 +506,66 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
         mBinding.contentView.getLocationOnScreen(contentLocation);
 
         final float x = event.getRawX() - contentLocation[0];
+        final float y = event.getRawY() - contentLocation[1];
 
         float deltaX = x - mInitialTouchX;
+        float deltaY = y - mInitialTouchY;
 
         // Limit movement within the parent
         float maxDeltaX = (getAvailableSlideZoneWidth() - mBinding.alarmButton.getWidth()) / 2f;
-        deltaX = Math.max(-maxDeltaX, Math.min(deltaX, maxDeltaX));
-        mBinding.alarmButton.setTranslationX(deltaX);
+        float maxDeltaY = Math.max(mBinding.alarmButton.getHeight(), dpToPx(48, getResources().getDisplayMetrics()));
 
-        if (Math.abs(deltaX) >= maxDeltaX) {
-            if (mTranslationAnimator != null && (mTranslationAnimator.isRunning() || mTranslationAnimator.isStarted())) {
-                mTranslationAnimator.cancel();
+        // Prefer the dominant axis so horizontal dismiss/snooze is not mistaken for disable.
+        final boolean verticalGesture = canDisable && Math.abs(deltaY) > Math.abs(deltaX);
+
+        if (verticalGesture) {
+            deltaY = Math.max(0f, Math.min(deltaY, maxDeltaY));
+            mBinding.alarmButton.setTranslationX(0f);
+            mBinding.alarmButton.setTranslationY(deltaY);
+            mBinding.snoozeText.setAlpha(1.0f);
+            mBinding.dismissText.setAlpha(1.0f);
+
+            if (deltaY >= maxDeltaY) {
+                if (mTranslationAnimator != null && (mTranslationAnimator.isRunning() || mTranslationAnimator.isStarted())) {
+                    mTranslationAnimator.cancel();
+                }
             }
-        }
+        } else {
+            deltaX = Math.max(-maxDeltaX, Math.min(deltaX, maxDeltaX));
+            mBinding.alarmButton.setTranslationX(deltaX);
+            mBinding.alarmButton.setTranslationY(0f);
 
-        updateTextAlpha(deltaX);
+            if (Math.abs(deltaX) >= maxDeltaX) {
+                if (mTranslationAnimator != null && (mTranslationAnimator.isRunning() || mTranslationAnimator.isStarted())) {
+                    mTranslationAnimator.cancel();
+                }
+            }
+
+            updateTextAlpha(deltaX);
+        }
 
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
             LOGGER.v("onTouch ended: %s", event);
 
             mInitialPointerIndex = MotionEvent.INVALID_POINTER_ID;
 
-            if (mBinding.contentView.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL) {
+            if (verticalGesture) {
+                if (deltaY >= maxDeltaY) {
+                    dismissAndDisable();
+                } else {
+                    resetAnimations();
+                }
+            } else if (mBinding.contentView.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL) {
                 if (deltaX <= -maxDeltaX) {
                     dismiss(); // Left = Dismiss in RTL
                 } else if (deltaX >= maxDeltaX) {
-                    snooze(); // Right = Snooze en RTL
+                    snooze(); // Right = Snooze in RTL
                 } else {
                     resetAnimations();
                 }
             } else {
                 if (deltaX >= maxDeltaX) {
-                    dismiss(); // Right = Dismiss in RTL
+                    dismiss(); // Right = Dismiss in LTR
                 } else if (deltaX <= -maxDeltaX) {
                     snooze(); // Left = Snooze in LTR
                 } else {
@@ -656,6 +697,21 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
         initSlideColors();
         initSlideTexts();
         initSlideAnimations();
+        initDisableHint();
+    }
+
+    /**
+     * Shows the swipe-down hint for repeating alarms that can be permanently disabled.
+     */
+    private void initDisableHint() {
+        if (canPermanentlyDisableAlarm() && mIsSwipeActionEnabled) {
+            mBinding.disableHintText.setText(R.string.swipe_down_to_disable_hint);
+            mBinding.disableHintText.setTypeface(mGeneralBoldTypeface);
+            mBinding.disableHintText.setTextColor(SettingsDAO.getDismissTitleColor(mPrefs));
+            mBinding.disableHintText.setVisibility(VISIBLE);
+        } else {
+            mBinding.disableHintText.setVisibility(GONE);
+        }
     }
 
     /**
@@ -678,14 +734,17 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
      */
     private void initSlideTexts() {
         boolean disabled = isSnoozeDisabledForAlarmInstance();
+        final boolean canDisable = canPermanentlyDisableAlarm();
 
         mBinding.alarmButton.setContentDescription(getString(disabled
             ? (isOccasionalAlarmDeletedAfterUse()
             ? R.string.description_direction_both_for_occasional_non_repeatable_alarm
             : R.string.description_direction_both_for_non_repeatable_alarm)
+            : (canDisable
+            ? R.string.description_direction_both_with_disable
             : (isOccasionalAlarmDeletedAfterUse()
             ? R.string.description_direction_both_for_occasional_alarm
-            : R.string.description_direction_both)
+            : R.string.description_direction_both))
         ));
 
         mBinding.snoozeText.setTypeface(mGeneralBoldTypeface);
@@ -795,6 +854,7 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
      */
     private void initButtonModeUI() {
         mBinding.slideZoneLayout.setVisibility(GONE);
+        mBinding.disableHintText.setVisibility(GONE);
 
         if (isSnoozeDisabledForAlarm()) {
             initDismissOnlyButton();
@@ -815,11 +875,19 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
         mBinding.dismissOnlyButton.setText(getString(isOccasionalAlarmDeletedAfterUse() ? R.string.delete : R.string.button_action_dismiss));
         mBinding.dismissOnlyButton.setContentDescription(getString(isOccasionalAlarmDeletedAfterUse()
             ? R.string.description_dismiss_button_for_occasional_alarm
-            : R.string.description_dismiss_button
+            : (canPermanentlyDisableAlarm()
+            ? R.string.description_dismiss_button_with_disable
+            : R.string.description_dismiss_button)
         ));
 
         mBinding.dismissOnlyButton.setVisibility(VISIBLE);
         mBinding.dismissOnlyButton.setOnClickListener(this);
+        if (canPermanentlyDisableAlarm()) {
+            mBinding.dismissOnlyButton.setOnLongClickListener(v -> {
+                dismissAndDisable();
+                return true;
+            });
+        }
         // Allow text scrolling (all other attributes are indicated in the "alarm_activity.xml" file)
         mBinding.dismissOnlyButton.setSelected(true);
     }
@@ -846,10 +914,18 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
         mBinding.dismissButton.setTypeface(mGeneralBoldTypeface);
         mBinding.dismissButton.setContentDescription(getString(isOccasionalAlarmDeletedAfterUse()
             ? R.string.description_dismiss_button_for_occasional_alarm
-            : R.string.description_dismiss_button
+            : (canPermanentlyDisableAlarm()
+            ? R.string.description_dismiss_button_with_disable
+            : R.string.description_dismiss_button)
         ));
         mBinding.dismissButton.setVisibility(VISIBLE);
         mBinding.dismissButton.setOnClickListener(this);
+        if (canPermanentlyDisableAlarm()) {
+            mBinding.dismissButton.setOnLongClickListener(v -> {
+                dismissAndDisable();
+                return true;
+            });
+        }
 
         // Allow text scrolling (all other attributes are indicated in the "alarm_activity.xml" file)
         mBinding.snoozeButton.setSelected(true);
@@ -1118,6 +1194,7 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
 
         mBinding.alarmButton.animate()
             .translationX(0)
+            .translationY(0)
             .setDuration(200)
             .start();
 
@@ -1253,6 +1330,37 @@ public class AlarmActivity extends BaseActivity implements View.OnClickListener,
 
         // Unbind here, otherwise alarm will keep ringing until activity finishes.
         unbindAlarmService();
+    }
+
+    /**
+     * Permanently disables a repeating alarm while retiring the current instance.
+     * Falls back to {@link #dismiss()} for non-recurring alarms.
+     */
+    private void dismissAndDisable() {
+        if (!canPermanentlyDisableAlarm()) {
+            dismiss();
+            return;
+        }
+
+        mAlarmHandled = true;
+        LOGGER.v("Dismissed and disabled: %s", mAlarmInstance);
+
+        displayAlarmActionMessage(R.string.alarm_alert_disabled_text, null,
+            getString(R.string.alarm_alert_disabled_text));
+
+        AlarmStateManager.deleteInstanceAndDisableParent(this, mAlarmInstance, false);
+
+        Events.sendAlarmEvent(R.string.action_disable, R.string.label_deskclock);
+
+        unbindAlarmService();
+    }
+
+    /**
+     * @return {@code true} if the parent alarm is recurring and can be permanently turned off
+     * from the ringing UI.
+     */
+    private boolean canPermanentlyDisableAlarm() {
+        return mAlarm != null && mAlarm.isRecurring();
     }
 
     /**

@@ -92,6 +92,18 @@ public class AlarmUtils {
         }
     }
 
+    public static void showDisableToast(Context context, Alarm alarm, AlarmInstance instance) {
+        final Context localizedContext = Utils.getLocalizedContext(context);
+        final String time = DateFormat.getTimeFormat(context).format(instance.getAlarmTime().getTime());
+        final String text = localizedContext.getString(R.string.alarm_is_disabled, time);
+
+        if (DataModel.getDataModel().isApplicationInForeground()) {
+            CustomToast.showLongWithManager(context, text);
+        } else {
+            Toast.makeText(context, text, Toast.LENGTH_LONG).show();
+        }
+    }
+
     /**
      * Returns a localized string representing the given date.
      *

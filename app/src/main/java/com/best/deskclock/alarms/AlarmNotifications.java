@@ -323,6 +323,16 @@ public final class AlarmNotifications {
 
         builder.addAction(R.drawable.ic_alarm_off, dismissActionTitle, dismissPendingIntent);
 
+        if (alarm.isRecurring()) {
+            Intent disableIntent = AlarmStateManager.createStateChangeIntent(
+                context, AlarmStateManager.ALARM_DISABLE_TAG, instance, AlarmInstance.DISMISSED_STATE);
+            disableIntent.putExtra(AlarmStateManager.FROM_NOTIFICATION_EXTRA, true);
+            PendingIntent disablePendingIntent = PendingIntent.getService(
+                context, id + 1, disableIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            builder.addAction(R.drawable.ic_alarm_off,
+                localizedContext.getString(R.string.alarm_alert_disable_text), disablePendingIntent);
+        }
+
         NotificationManagerCompat nm = NotificationManagerCompat.from(context);
         final Notification notification = builder.build();
 
@@ -448,6 +458,17 @@ public final class AlarmNotifications {
         }
 
         notification.addAction(R.drawable.ic_alarm_off, dismissActionTitle, dismissPendingIntent);
+
+        if (alarm.isRecurring()) {
+            Intent disableIntent = AlarmStateManager.createStateChangeIntent(context,
+                AlarmStateManager.ALARM_DISABLE_TAG, instance, AlarmInstance.DISMISSED_STATE);
+            disableIntent.putExtra(AlarmStateManager.FROM_NOTIFICATION_EXTRA, true);
+            PendingIntent disablePendingIntent = PendingIntent.getService(context,
+                ALARM_FIRING_NOTIFICATION_ID - 1, disableIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            notification.addAction(R.drawable.ic_alarm_off,
+                localizedContext.getString(R.string.alarm_alert_disable_text), disablePendingIntent);
+        }
 
         // Setup fullscreen intent
         Intent fullScreenIntent = AlarmInstance.createIntent(context, AlarmActivity.class, instance.mId);

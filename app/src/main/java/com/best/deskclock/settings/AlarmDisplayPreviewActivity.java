@@ -104,6 +104,7 @@ public class AlarmDisplayPreviewActivity extends BaseActivity
     private Animator mTranslationAnimator;
     private int mInitialPointerIndex = MotionEvent.INVALID_POINTER_ID;
     private float mInitialTouchX = 0;
+    private float mInitialTouchY = 0;
     private Vibrator mVibrator;
     private boolean mAreSnoozedOrDismissedAlarmVibrationsEnabled;
     private boolean mIsFadeTransitionsEnabled;
@@ -255,6 +256,7 @@ public class AlarmDisplayPreviewActivity extends BaseActivity
             mBinding.contentView.getLocationOnScreen(contentLocation);
 
             mInitialTouchX = event.getRawX() - contentLocation[0];
+            mInitialTouchY = event.getRawY() - contentLocation[1];
         } else if (action == MotionEvent.ACTION_CANCEL) {
             // Clear the pointer index.
             mInitialPointerIndex = MotionEvent.INVALID_POINTER_ID;
@@ -274,36 +276,63 @@ public class AlarmDisplayPreviewActivity extends BaseActivity
         mBinding.contentView.getLocationOnScreen(contentLocation);
 
         final float x = event.getRawX() - contentLocation[0];
+        final float y = event.getRawY() - contentLocation[1];
 
         float deltaX = x - mInitialTouchX;
+        float deltaY = y - mInitialTouchY;
 
         // Limit movement within the parent
         float maxDeltaX = (getAvailableSlideZoneWidth() - mBinding.alarmButton.getWidth()) / 2f;
-        deltaX = Math.max(-maxDeltaX, Math.min(deltaX, maxDeltaX));
-        mBinding.alarmButton.setTranslationX(deltaX);
+        float maxDeltaY = Math.max(mBinding.alarmButton.getHeight(), dpToPx(48, getResources().getDisplayMetrics()));
 
-        if (Math.abs(deltaX) >= maxDeltaX) {
-            if (mTranslationAnimator != null && (mTranslationAnimator.isRunning() || mTranslationAnimator.isStarted())) {
-                mTranslationAnimator.cancel();
+        final boolean verticalGesture = Math.abs(deltaY) > Math.abs(deltaX);
+
+        if (verticalGesture) {
+            deltaY = Math.max(0f, Math.min(deltaY, maxDeltaY));
+            mBinding.alarmButton.setTranslationX(0f);
+            mBinding.alarmButton.setTranslationY(deltaY);
+            mBinding.snoozeText.setAlpha(1.0f);
+            mBinding.dismissText.setAlpha(1.0f);
+
+            if (deltaY >= maxDeltaY) {
+                if (mTranslationAnimator != null && (mTranslationAnimator.isRunning() || mTranslationAnimator.isStarted())) {
+                    mTranslationAnimator.cancel();
+                }
             }
-        }
+        } else {
+            deltaX = Math.max(-maxDeltaX, Math.min(deltaX, maxDeltaX));
+            mBinding.alarmButton.setTranslationX(deltaX);
+            mBinding.alarmButton.setTranslationY(0f);
 
-        updateTextAlpha(deltaX);
+            if (Math.abs(deltaX) >= maxDeltaX) {
+                if (mTranslationAnimator != null && (mTranslationAnimator.isRunning() || mTranslationAnimator.isStarted())) {
+                    mTranslationAnimator.cancel();
+                }
+            }
+
+            updateTextAlpha(deltaX);
+        }
 
         if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_POINTER_UP) {
             mInitialPointerIndex = MotionEvent.INVALID_POINTER_ID;
 
-            if (mBinding.contentView.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL) {
+            if (verticalGesture) {
+                if (deltaY >= maxDeltaY) {
+                    dismissAndDisable();
+                } else {
+                    resetAnimations();
+                }
+            } else if (mBinding.contentView.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL) {
                 if (deltaX <= -maxDeltaX) {
                     dismiss(); // Left = Dismiss in RTL
                 } else if (deltaX >= maxDeltaX) {
-                    snooze(); // Right = Snooze en RTL
+                    snooze(); // Right = Snooze in RTL
                 } else {
                     resetAnimations();
                 }
             } else {
                 if (deltaX >= maxDeltaX) {
-                    dismiss(); // Right = Dismiss in RTL
+                    dismiss(); // Right = Dismiss in LTR
                 } else if (deltaX <= -maxDeltaX) {
                     snooze(); // Left = snooze in LTR
                 } else {
@@ -415,6 +444,14 @@ public class AlarmDisplayPreviewActivity extends BaseActivity
         initSlideColors();
         initSlideTexts();
         initSlideAnimations();
+        initDisableHint();
+    }
+
+    private void initDisableHint() {
+        mBinding.disableHintText.setText(R.string.swipe_down_to_disable_hint);
+        mBinding.disableHintText.setTypeface(mGeneralBoldTypeface);
+        mBinding.disableHintText.setTextColor(SettingsDAO.getDismissTitleColor(mPrefs));
+        mBinding.disableHintText.setVisibility(VISIBLE);
     }
 
     /**
@@ -436,7 +473,7 @@ public class AlarmDisplayPreviewActivity extends BaseActivity
      * Initializes the slide mode texts.
      */
     private void initSlideTexts() {
-        mBinding.alarmButton.setContentDescription(getString(R.string.description_direction_both));
+        mBinding.alarmButton.setContentDescription(getString(R.string.description_direction_both_with_disable));
 
         mBinding.snoozeText.setTypeface(mGeneralBoldTypeface);
         mBinding.snoozeText.setTextColor(SettingsDAO.getSnoozeTitleColor(mPrefs));
@@ -536,6 +573,7 @@ public class AlarmDisplayPreviewActivity extends BaseActivity
      */
     private void initButtonModeUI() {
         mBinding.slideZoneLayout.setVisibility(GONE);
+        mBinding.disableHintText.setVisibility(GONE);
 
         initSnoozeAndDismissButtons();
     }
@@ -561,9 +599,13 @@ public class AlarmDisplayPreviewActivity extends BaseActivity
         mBinding.dismissButton.setBackgroundColor(SettingsDAO.getDismissButtonColor(mPrefs, this));
         mBinding.dismissButton.setText(getString(R.string.button_action_dismiss));
         mBinding.dismissButton.setTypeface(mGeneralBoldTypeface);
-        mBinding.dismissButton.setContentDescription(getString(R.string.description_dismiss_button));
+        mBinding.dismissButton.setContentDescription(getString(R.string.description_dismiss_button_with_disable));
         mBinding.dismissButton.setVisibility(VISIBLE);
         mBinding.dismissButton.setOnClickListener(this);
+        mBinding.dismissButton.setOnLongClickListener(v -> {
+            dismissAndDisable();
+            return true;
+        });
 
         // Allow text scrolling (all other attributes are indicated in the "alarm_activity.xml" file)
         mBinding.snoozeButton.setSelected(true);
@@ -771,6 +813,7 @@ public class AlarmDisplayPreviewActivity extends BaseActivity
 
         mBinding.alarmButton.animate()
             .translationX(0)
+            .translationY(0)
             .setDuration(200)
             .start();
 
@@ -799,6 +842,17 @@ public class AlarmDisplayPreviewActivity extends BaseActivity
         }
 
         displayAlarmActionMessage(R.string.alarm_alert_off_text, null);
+    }
+
+    /**
+     * Preview feedback for permanently disabling a repeating alarm.
+     */
+    private void dismissAndDisable() {
+        if (mAreSnoozedOrDismissedAlarmVibrationsEnabled) {
+            performSingleVibration();
+        }
+
+        displayAlarmActionMessage(R.string.alarm_alert_disabled_text, null);
     }
 
     /**
