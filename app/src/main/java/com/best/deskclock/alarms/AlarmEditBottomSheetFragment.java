@@ -80,6 +80,7 @@ import com.best.deskclock.dialogfragment.SpinnerTimePickerDialogFragment;
 import com.best.deskclock.dialogfragment.VibrationPatternDialogFragment;
 import com.best.deskclock.dialogfragment.VolumeCrescendoDurationDialogFragment;
 import com.best.deskclock.events.Events;
+import com.best.deskclock.mighty.LastCreatedAlarmDefaults;
 import com.best.deskclock.mighty.exchange.ExchangeManager;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.AlarmInstance;
@@ -1494,23 +1495,27 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
         mBinding.duplicateButton.setOnClickListener(v -> {
             Events.sendAlarmEvent(R.string.action_duplicate, R.string.label_deskclock);
 
+            final ContentResolver cr = requireContext().getApplicationContext().getContentResolver();
+            final long originalAlarmId = mAlarm.id;
+
             Alarm duplicatedAlarm = new Alarm(mAlarm);
             duplicatedAlarm.id = Alarm.INVALID_ID;
             duplicatedAlarm.instanceState = AlarmInstance.SILENT_STATE;
+            // Pause windows are alarm-specific; a fresh copy should not inherit them.
+            duplicatedAlarm.pauseStartDate = 0;
+            duplicatedAlarm.pauseEndDate = 0;
             if (duplicatedAlarm.label != null && !duplicatedAlarm.label.isEmpty()) {
                 duplicatedAlarm.label = duplicatedAlarm.label + " " + getString(R.string.mighty_copy_suffix);
             }
 
-            final long originalAlarmId = mAlarm.id;
-
-            mAlarmUpdateHandler.asyncAddAlarm(duplicatedAlarm, true, savedAlarm ->
-                com.best.deskclock.base.AppExecutors.getDiskIO().execute(() -> {
-                    final android.content.ContentResolver cr = requireContext().getApplicationContext().getContentResolver();
-                    for (Long tagId : com.best.deskclock.provider.Tag.getTagIdsForAlarm(cr, originalAlarmId)) {
-                        com.best.deskclock.provider.Tag.addTagToAlarm(cr, savedAlarm.id, tagId);
-                    }
-                })
-            );
+            // Copy tags on the disk thread right after insert (before scheduling / list reload)
+            // so an active tag filter immediately includes the duplicate. Use the application
+            // ContentResolver — never requireContext() after dismiss().
+            mAlarmUpdateHandler.asyncAddAlarm(duplicatedAlarm, true, savedAlarm -> {
+                for (Long tagId : Tag.getTagIdsForAlarm(cr, originalAlarmId)) {
+                    Tag.addTagToAlarm(cr, savedAlarm.id, tagId);
+                }
+            }, null);
 
             Utils.performHapticFeedback(mBinding.duplicateButton, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
 
@@ -1781,6 +1786,7 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
         if (!timeChanged && !minorFieldsChanged) {
             if (isNewAlarmCreated) {
                 mAlarmUpdateHandler.asyncUpdateAlarm(mAlarm, true, false);
+                LastCreatedAlarmDefaults.save(mPrefs, mAlarm);
             }
             return;
         }
@@ -1796,6 +1802,9 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
         AlarmVisualCache.invalidate(mAlarm.id);
 
         mAlarmUpdateHandler.asyncUpdateAlarm(mAlarm, popToast, minorUpdate);
+
+        // Remember behavioral settings so the next newly created alarm can reuse them.
+        LastCreatedAlarmDefaults.save(mPrefs, mAlarm);
 
         if (isAdded()) {
             Bundle result = new Bundle();

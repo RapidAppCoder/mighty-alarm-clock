@@ -16,6 +16,11 @@ import static com.best.deskclock.settings.PreferencesDefaultValues.SORT_ALARM_BY
 import static com.best.deskclock.settings.PreferencesDefaultValues.SORT_ALARM_MANUALLY;
 import static com.best.deskclock.settings.PreferencesDefaultValues.SPINNER_TIME_PICKER_STYLE;
 import static com.best.deskclock.settings.PreferencesKeys.KEY_ALARM_FONT;
+import static com.best.deskclock.settings.PreferencesKeys.KEY_ALARM_LIST_EXTRA_SORT;
+import static com.best.deskclock.settings.PreferencesKeys.KEY_ALARM_LIST_FILTER_ENABLED;
+import static com.best.deskclock.settings.PreferencesKeys.KEY_ALARM_LIST_FILTER_ONE_SHOT;
+import static com.best.deskclock.settings.PreferencesKeys.KEY_ALARM_LIST_FILTER_REPEATING;
+import static com.best.deskclock.settings.PreferencesKeys.KEY_ALARM_LIST_FILTER_TAG_ID;
 import static com.best.deskclock.settings.PreferencesKeys.KEY_DISPLAY_LOW_ALARM_VOLUME_WARNING;
 import static com.best.deskclock.uidata.UiDataModel.Tab.ALARMS;
 
@@ -158,7 +163,7 @@ public final class AlarmFragment extends DeskClockFragment
     private long mCurrentUpdateToken;
     private String mLastSortOrder = null;
 
-    // Search/filter state (lightly persisted in fragment fields; not restored across process death)
+    // Search/filter state (persisted to SharedPreferences so it survives app restarts)
     private List<AlarmItemHolder> mAllItemHolders = new ArrayList<>();
     private String mSearchQuery = "";
     private boolean mFilterEnabledOnly = false;
@@ -172,6 +177,10 @@ public final class AlarmFragment extends DeskClockFragment
 
     private long mFilterTagId = FILTER_TAG_ALL;
     private Set<Long> mFilterTagAlarmIds = null; // whitelist of alarm ids for the active tag filter, or null if inactive
+    /** Suppresses preference writes while restoring UI state from SharedPreferences. */
+    private boolean mRestoringFilterUi = false;
+    /** Tag ids corresponding to spinner positions 2..n (loaded asynchronously). */
+    private List<Long> mTagFilterSpinnerIds = new ArrayList<>();
 
     // Controllers
     private AlarmAdapter mItemAdapter;
@@ -306,9 +315,11 @@ public final class AlarmFragment extends DeskClockFragment
     }
 
     /**
-     * Wires up the search field, filter chips and extra-sort spinner added above the alarm list.
+     * Wires up the search field, filter chips, sort/tag spinners and reset control above the alarm list.
      */
     private void setupFilterBar() {
+        restoreFilterStateFromPrefs();
+
         mBinding.alarmSearchEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -317,6 +328,7 @@ public final class AlarmFragment extends DeskClockFragment
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 mSearchQuery = s == null ? "" : s.toString();
+                updateFilterResetVisibility();
                 applyFilters();
             }
 
@@ -325,33 +337,66 @@ public final class AlarmFragment extends DeskClockFragment
             }
         });
 
+        mRestoringFilterUi = true;
+        mBinding.alarmFilterChipEnabled.setChecked(mFilterEnabledOnly);
+        mBinding.alarmFilterChipRepeating.setChecked(mFilterRepeatingOnly);
+        mBinding.alarmFilterChipOneShot.setChecked(mFilterOneShotOnly);
+        mBinding.alarmSortSpinner.setSelection(mExtraSortMode, false);
+        mRestoringFilterUi = false;
+
         mBinding.alarmFilterChipEnabled.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (mRestoringFilterUi) {
+                return;
+            }
             mFilterEnabledOnly = isChecked;
+            persistFilterState();
+            updateFilterResetVisibility();
             applyFilters();
         });
 
         mBinding.alarmFilterChipRepeating.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (mRestoringFilterUi) {
+                return;
+            }
             mFilterRepeatingOnly = isChecked;
             if (isChecked && mFilterOneShotOnly) {
                 mFilterOneShotOnly = false;
+                mRestoringFilterUi = true;
                 mBinding.alarmFilterChipOneShot.setChecked(false);
+                mRestoringFilterUi = false;
             }
+            persistFilterState();
+            updateFilterResetVisibility();
             applyFilters();
         });
 
         mBinding.alarmFilterChipOneShot.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (mRestoringFilterUi) {
+                return;
+            }
             mFilterOneShotOnly = isChecked;
             if (isChecked && mFilterRepeatingOnly) {
                 mFilterRepeatingOnly = false;
+                mRestoringFilterUi = true;
                 mBinding.alarmFilterChipRepeating.setChecked(false);
+                mRestoringFilterUi = false;
             }
+            persistFilterState();
+            updateFilterResetVisibility();
             applyFilters();
         });
+
+        mBinding.alarmFilterChipReset.setOnClickListener(v -> resetFilters());
 
         mBinding.alarmSortSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (mRestoringFilterUi) {
+                    return;
+                }
                 mExtraSortMode = position;
+                persistFilterState();
+                updateFilterResetVisibility();
                 applyFilters();
             }
 
@@ -360,7 +405,73 @@ public final class AlarmFragment extends DeskClockFragment
             }
         });
 
+        updateFilterResetVisibility();
         setupTagFilterSpinner();
+    }
+
+    private void restoreFilterStateFromPrefs() {
+        mFilterEnabledOnly = mPrefs.getBoolean(KEY_ALARM_LIST_FILTER_ENABLED, false);
+        mFilterRepeatingOnly = mPrefs.getBoolean(KEY_ALARM_LIST_FILTER_REPEATING, false);
+        mFilterOneShotOnly = mPrefs.getBoolean(KEY_ALARM_LIST_FILTER_ONE_SHOT, false);
+        mExtraSortMode = mPrefs.getInt(KEY_ALARM_LIST_EXTRA_SORT, 0);
+        mFilterTagId = mPrefs.getLong(KEY_ALARM_LIST_FILTER_TAG_ID, FILTER_TAG_ALL);
+
+        // Repeating and one-shot are mutually exclusive.
+        if (mFilterRepeatingOnly && mFilterOneShotOnly) {
+            mFilterOneShotOnly = false;
+        }
+        if (mExtraSortMode < 0 || mExtraSortMode > 4) {
+            mExtraSortMode = 0;
+        }
+    }
+
+    private void persistFilterState() {
+        mPrefs.edit()
+            .putBoolean(KEY_ALARM_LIST_FILTER_ENABLED, mFilterEnabledOnly)
+            .putBoolean(KEY_ALARM_LIST_FILTER_REPEATING, mFilterRepeatingOnly)
+            .putBoolean(KEY_ALARM_LIST_FILTER_ONE_SHOT, mFilterOneShotOnly)
+            .putInt(KEY_ALARM_LIST_EXTRA_SORT, mExtraSortMode)
+            .putLong(KEY_ALARM_LIST_FILTER_TAG_ID, mFilterTagId)
+            .apply();
+    }
+
+    private void resetFilters() {
+        mRestoringFilterUi = true;
+        mFilterEnabledOnly = false;
+        mFilterRepeatingOnly = false;
+        mFilterOneShotOnly = false;
+        mExtraSortMode = 0;
+        mFilterTagId = FILTER_TAG_ALL;
+        mFilterTagAlarmIds = null;
+        mSearchQuery = "";
+
+        mBinding.alarmSearchEditText.setText("");
+        mBinding.alarmFilterChipEnabled.setChecked(false);
+        mBinding.alarmFilterChipRepeating.setChecked(false);
+        mBinding.alarmFilterChipOneShot.setChecked(false);
+        mBinding.alarmSortSpinner.setSelection(0, false);
+        if (mBinding.alarmTagSpinner.getAdapter() != null
+            && mBinding.alarmTagSpinner.getAdapter().getCount() > 0) {
+            mBinding.alarmTagSpinner.setSelection(0, false);
+        }
+        mRestoringFilterUi = false;
+
+        persistFilterState();
+        updateFilterResetVisibility();
+        applyFilters();
+    }
+
+    private void updateFilterResetVisibility() {
+        if (mBinding == null) {
+            return;
+        }
+        final boolean hasActiveFilter = mFilterEnabledOnly
+            || mFilterRepeatingOnly
+            || mFilterOneShotOnly
+            || mExtraSortMode != 0
+            || mFilterTagId != FILTER_TAG_ALL
+            || (mSearchQuery != null && !mSearchQuery.trim().isEmpty());
+        mBinding.alarmFilterChipReset.setVisibility(hasActiveFilter ? VISIBLE : GONE);
     }
 
     /**
@@ -370,6 +481,7 @@ public final class AlarmFragment extends DeskClockFragment
     private void setupTagFilterSpinner() {
         final Context context = requireContext();
         final ContentResolver cr = context.getContentResolver();
+        final long savedTagId = mFilterTagId;
 
         AppExecutors.getDiskIO().execute(() -> {
             final List<Tag> tags = Tag.getTags(cr);
@@ -380,31 +492,63 @@ public final class AlarmFragment extends DeskClockFragment
                 }
 
                 final List<String> labels = new ArrayList<>();
+                final List<Long> tagIds = new ArrayList<>();
                 labels.add(getString(R.string.mighty_tag_filter_all));
                 labels.add(getString(R.string.mighty_tag_filter_untagged));
                 for (Tag tag : tags) {
                     labels.add(tag.name);
+                    tagIds.add(tag.id);
                 }
+                mTagFilterSpinnerIds = tagIds;
 
                 final ArrayAdapter<String> adapter =
                     new ArrayAdapter<>(context, android.R.layout.simple_spinner_item, labels);
                 adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+                mRestoringFilterUi = true;
                 mBinding.alarmTagSpinner.setAdapter(adapter);
+
+                int selectedPosition = 0;
+                if (savedTagId == FILTER_TAG_UNTAGGED) {
+                    selectedPosition = 1;
+                } else if (savedTagId != FILTER_TAG_ALL) {
+                    for (int i = 0; i < tagIds.size(); i++) {
+                        if (tagIds.get(i) == savedTagId) {
+                            selectedPosition = i + 2;
+                            break;
+                        }
+                    }
+                    // Saved tag was deleted — fall back to "all".
+                    if (selectedPosition == 0 && savedTagId != FILTER_TAG_ALL) {
+                        mFilterTagId = FILTER_TAG_ALL;
+                        persistFilterState();
+                    }
+                }
+                mBinding.alarmTagSpinner.setSelection(selectedPosition, false);
 
                 mBinding.alarmTagSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     @Override
                     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                        if (mRestoringFilterUi) {
+                            return;
+                        }
                         if (position == 0) {
                             mFilterTagId = FILTER_TAG_ALL;
                             mFilterTagAlarmIds = null;
+                            persistFilterState();
+                            updateFilterResetVisibility();
                             applyFilters();
                         } else if (position == 1) {
                             mFilterTagId = FILTER_TAG_UNTAGGED;
+                            persistFilterState();
+                            updateFilterResetVisibility();
                             applyUntaggedFilter();
                         } else {
-                            final Tag selectedTag = tags.get(position - 2);
-                            mFilterTagId = selectedTag.id;
-                            applyTagFilter(selectedTag.id);
+                            final long tagId = mTagFilterSpinnerIds.get(position - 2);
+                            mFilterTagId = tagId;
+                            persistFilterState();
+                            updateFilterResetVisibility();
+                            applyTagFilter(tagId);
                         }
                     }
 
@@ -412,8 +556,28 @@ public final class AlarmFragment extends DeskClockFragment
                     public void onNothingSelected(AdapterView<?> parent) {
                     }
                 });
+                mRestoringFilterUi = false;
+
+                // Apply the restored tag filter now that the spinner is ready.
+                refreshActiveTagFilter();
+                updateFilterResetVisibility();
             });
         });
+    }
+
+    /**
+     * Re-resolves the alarm-id whitelist for the currently selected tag filter.
+     * Call this whenever the alarm list or tag associations may have changed.
+     */
+    private void refreshActiveTagFilter() {
+        if (mFilterTagId == FILTER_TAG_ALL) {
+            mFilterTagAlarmIds = null;
+            applyFilters();
+        } else if (mFilterTagId == FILTER_TAG_UNTAGGED) {
+            applyUntaggedFilter();
+        } else {
+            applyTagFilter(mFilterTagId);
+        }
     }
 
     /**
@@ -528,6 +692,7 @@ public final class AlarmFragment extends DeskClockFragment
             }
         }
 
+        updateFilterResetVisibility();
         setAdapterItems(filtered, SystemClock.elapsedRealtime());
     }
 
@@ -760,9 +925,11 @@ public final class AlarmFragment extends DeskClockFragment
         }
 
         // Keep the full sorted list around so search/filter/extra-sort can be re-applied without
-        // reloading from the database, then push the filtered result to the adapter.
+        // reloading from the database, then refresh the tag whitelist (if any) before filtering.
+        // Tag associations can change without altering alarm rows; always re-resolve the whitelist
+        // so newly tagged / duplicated alarms appear under the active tag filter immediately.
         mAllItemHolders = itemHolders;
-        applyFilters();
+        refreshActiveTagFilter();
     }
 
     @Override

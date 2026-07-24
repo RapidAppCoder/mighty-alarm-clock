@@ -27,6 +27,7 @@ import com.best.deskclock.dialogfragment.AlarmDelayPickerDialogFragment;
 import com.best.deskclock.dialogfragment.MaterialTimePickerDialogFragment;
 import com.best.deskclock.dialogfragment.SpinnerTimePickerDialogFragment;
 import com.best.deskclock.events.Events;
+import com.best.deskclock.mighty.LastCreatedAlarmDefaults;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.AlarmInstance;
 import com.best.deskclock.utils.LogUtils;
@@ -289,6 +290,7 @@ public final class AlarmTimeClickHandler {
 
     private void createNewAlarm(Alarm newAlarm) {
         AlarmVisualCache.invalidate(newAlarm.id);
+        LastCreatedAlarmDefaults.save(mPrefs, newAlarm);
 
         mAlarmUpdateHandler.asyncAddAlarm(newAlarm, false, addedAlarm ->
             AppExecutors.getMainThread().post(() -> {
@@ -307,15 +309,20 @@ public final class AlarmTimeClickHandler {
         alarm.minutes = minute;
         alarm.syncByLabel = false;
         alarm.enabled = true;
-        alarm.vibrate = SettingsDAO.areAlarmVibrationsEnabledByDefault(mPrefs);
-        alarm.vibrationPattern = SettingsDAO.getVibrationPattern(mPrefs);
-        alarm.flash = SettingsDAO.shouldTurnOnBackFlashForTriggeredAlarm(mPrefs);
-        alarm.deleteAfterUse = SettingsDAO.isOccasionalAlarmDeletedByDefault(mPrefs);
-        alarm.autoSilenceDuration = SettingsDAO.getAlarmTimeout(mPrefs);
-        alarm.snoozeDuration = SettingsDAO.getSnoozeLength(mPrefs);
-        alarm.missedAlarmRepeatLimit = SettingsDAO.getMissedAlarmRepeatLimit(mPrefs);
-        alarm.crescendoDuration = SettingsDAO.getAlarmVolumeCrescendoDuration(mPrefs);
-        alarm.alarmVolume = audioManager.getStreamVolume(STREAM_ALARM);
+
+        if (LastCreatedAlarmDefaults.hasDefaults(mPrefs)) {
+            LastCreatedAlarmDefaults.apply(mPrefs, alarm);
+        } else {
+            alarm.vibrate = SettingsDAO.areAlarmVibrationsEnabledByDefault(mPrefs);
+            alarm.vibrationPattern = SettingsDAO.getVibrationPattern(mPrefs);
+            alarm.flash = SettingsDAO.shouldTurnOnBackFlashForTriggeredAlarm(mPrefs);
+            alarm.deleteAfterUse = SettingsDAO.isOccasionalAlarmDeletedByDefault(mPrefs);
+            alarm.autoSilenceDuration = SettingsDAO.getAlarmTimeout(mPrefs);
+            alarm.snoozeDuration = SettingsDAO.getSnoozeLength(mPrefs);
+            alarm.missedAlarmRepeatLimit = SettingsDAO.getMissedAlarmRepeatLimit(mPrefs);
+            alarm.crescendoDuration = SettingsDAO.getAlarmVolumeCrescendoDuration(mPrefs);
+            alarm.alarmVolume = audioManager.getStreamVolume(STREAM_ALARM);
+        }
 
         return alarm;
     }

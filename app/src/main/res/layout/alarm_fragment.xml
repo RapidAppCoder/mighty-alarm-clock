@@ -19,18 +19,21 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingHorizontal="10dp"
-        android:paddingTop="4dp"
+        android:paddingTop="0dp"
+        android:paddingBottom="2dp"
         app:layout_constraintTop_toTopOf="parent">
 
         <EditText
             android:id="@+id/alarm_search_edit_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:minHeight="40dp"
             android:hint="@string/mighty_search_alarms_hint"
             android:inputType="text"
             android:maxLines="1"
             android:importantForAutofill="no" />
 
+        <!-- Row 1: filter chips + reset -->
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -39,6 +42,7 @@
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:gravity="center_vertical"
                 android:orientation="horizontal">
 
                 <com.google.android.material.chip.ChipGroup
@@ -70,23 +74,45 @@
 
                 </com.google.android.material.chip.ChipGroup>
 
-                <Spinner
-                    android:id="@+id/alarm_sort_spinner"
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/alarm_filter_chip_reset"
+                    style="@style/Widget.Material3.Chip.Assist"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:entries="@array/mighty_alarm_sort_options" />
-
-                <!-- Populated programmatically with "All tags" + every user-defined Tag. -->
-                <Spinner
-                    android:id="@+id/alarm_tag_spinner"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp" />
+                    android:layout_marginStart="4dp"
+                    android:text="@string/mighty_filter_reset"
+                    android:visibility="gone"
+                    app:chipIcon="@drawable/ic_reset"
+                    app:ensureMinTouchTargetSize="false" />
 
             </LinearLayout>
 
         </HorizontalScrollView>
+
+        <!-- Row 2: sort + tag filter -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="2dp">
+
+            <Spinner
+                android:id="@+id/alarm_sort_spinner"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:entries="@array/mighty_alarm_sort_options" />
+
+            <!-- Populated programmatically with "All tags" + every user-defined Tag. -->
+            <Spinner
+                android:id="@+id/alarm_tag_spinner"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -103,7 +129,7 @@
         android:id="@+id/alarm_recycler_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="4dp"
         android:paddingStart="0dp"
         android:paddingEnd="@dimen/alarm_list_padding_end"
         android:paddingBottom="@dimen/alarm_list_padding_bottom"

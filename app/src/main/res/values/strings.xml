@@ -1469,6 +1469,8 @@
     <string name="mighty_filter_repeating">Repeating</string>
     <!-- Filter chip label: only show one-shot (non-repeating) alarms -->
     <string name="mighty_filter_one_shot">One-shot</string>
+    <!-- Chip that clears all active list filters and resets sort/tag selection -->
+    <string name="mighty_filter_reset">Reset filters</string>
 
     <!-- Title of the "Mighty features" settings entry -->
     <string name="mighty_features_title">Mighty features</string>
@@ -1487,6 +1489,14 @@
     <!-- Preference that shares the event log as a CSV-like text -->
     <string name="mighty_export_event_log">Export event log</string>
     <string name="mighty_export_event_log_summary">Share the alarm event history as CSV</string>
+    <!-- Preference that opens an in-app event log viewer -->
+    <string name="mighty_view_event_log">View event log</string>
+    <string name="mighty_view_event_log_summary">Browse alarm event history in the app</string>
+    <string name="mighty_event_log_empty">No events recorded yet</string>
+    <!-- Single event log row. %1$s = date/time, %2$s = event type, %3$s = alarm label, %4$s = details -->
+    <string name="mighty_event_log_entry">%1$s\n%2$s — %3$s\n%4$s</string>
+    <string name="mighty_event_log_entry_no_details">%1$s\n%2$s — %3$s</string>
+    <string name="mighty_event_log_untitled_alarm">(no label)</string>
 
     <string name="mighty_category_global_mute">Global mute</string>
     <!-- Title of the global mute preference and dialog -->

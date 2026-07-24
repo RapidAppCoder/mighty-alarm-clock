@@ -675,6 +675,7 @@
     <string name="mighty_filter_enabled">Aktiv</string>
     <string name="mighty_filter_repeating">Wiederholend</string>
     <string name="mighty_filter_one_shot">Einmalig</string>
+    <string name="mighty_filter_reset">Filter zurücksetzen</string>
 
     <string name="mighty_features_title">Mighty-Funktionen</string>
     <string name="mighty_features_summary">Globaler Stummmodus, WLAN-Regeln, Backup, Austausch, Statistiken und mehr</string>
@@ -686,6 +687,12 @@
     <string name="mighty_reset_stats">Zurücksetzen</string>
     <string name="mighty_export_event_log">Ereignisprotokoll exportieren</string>
     <string name="mighty_export_event_log_summary">Wecker-Ereignisverlauf als CSV teilen</string>
+    <string name="mighty_view_event_log">Ereignisprotokoll anzeigen</string>
+    <string name="mighty_view_event_log_summary">Wecker-Ereignisverlauf in der App durchsuchen</string>
+    <string name="mighty_event_log_empty">Noch keine Ereignisse vorhanden</string>
+    <string name="mighty_event_log_entry">%1$s\n%2$s — %3$s\n%4$s</string>
+    <string name="mighty_event_log_entry_no_details">%1$s\n%2$s — %3$s</string>
+    <string name="mighty_event_log_untitled_alarm">(ohne Name)</string>
 
     <string name="mighty_category_global_mute">Globaler Stummmodus</string>
     <string name="mighty_global_mute_title">Globaler Stummmodus</string>

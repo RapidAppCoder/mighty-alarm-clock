@@ -53,7 +53,7 @@ public final class AlarmUpdateHandler {
      * @param alarm The alarm to be added.
      */
     public void asyncAddAlarm(final Alarm alarm) {
-        asyncAddAlarm(alarm, true, null);
+        asyncAddAlarm(alarm, true, null, null);
     }
 
     /**
@@ -64,6 +64,23 @@ public final class AlarmUpdateHandler {
      *                 with its generated database ID. Can be null.
      */
     public void asyncAddAlarm(final Alarm alarm, final boolean showSnackbar, final OnAlarmSavedListener listener) {
+        asyncAddAlarm(alarm, showSnackbar, null, listener);
+    }
+
+    /**
+     * Adds a new alarm on the background.
+     *
+     * @param alarm               The alarm to be added.
+     * @param showSnackbar        whether to show the "alarm set" snackbar when an instance is scheduled
+     * @param afterInsertOnDisk   optional callback invoked on the disk thread immediately after the alarm
+     *                            row is inserted (and before an instance is scheduled). Useful for copying
+     *                            tags or other related rows before the alarm list reloads.
+     * @param listener            A callback invoked on the main thread once the alarm has been successfully
+     *                            saved. Can be null.
+     */
+    public void asyncAddAlarm(final Alarm alarm, final boolean showSnackbar,
+                              final OnAlarmSavedListener afterInsertOnDisk,
+                              final OnAlarmSavedListener listener) {
         AppExecutors.getDiskIO().execute(() -> {
             AlarmInstance instance = null;
             Alarm newAlarm = null;
@@ -74,6 +91,10 @@ public final class AlarmUpdateHandler {
 
                 // Add alarm to db
                 newAlarm = alarm.addAlarm(cr);
+
+                if (afterInsertOnDisk != null) {
+                    afterInsertOnDisk.onAlarmSaved(newAlarm);
+                }
 
                 // Be ready to scroll to this alarm on UI later.
                 if (mScrollHandler != null) {

@@ -406,8 +406,10 @@ public class ClockProvider extends ContentProvider {
         resolver.notifyChange(uri, null);
 
         final int match = sURIMatcher.match(uri);
-        // Also notify the joined table of changes to instances or alarms.
-        if (match == ALARMS || match == INSTANCES || match == ALARMS_ID || match == INSTANCES_ID) {
+        // Also notify the joined table of changes to instances, alarms, or alarm-tag links
+        // (tag changes affect list filtering even when alarm rows themselves are unchanged).
+        if (match == ALARMS || match == INSTANCES || match == ALARMS_ID || match == INSTANCES_ID
+            || match == ALARM_TAGS) {
             resolver.notifyChange(AlarmsColumns.ALARMS_WITH_INSTANCES_URI, null);
         }
     }

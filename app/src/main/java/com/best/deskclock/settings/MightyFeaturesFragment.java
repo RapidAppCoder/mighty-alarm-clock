@@ -48,6 +48,7 @@ public class MightyFeaturesFragment extends ScreenFragment
     implements Preference.OnPreferenceClickListener, Preference.OnPreferenceChangeListener {
 
     Preference mDeviceStatsPref;
+    Preference mViewEventLogPref;
     Preference mExportEventLogPref;
     Preference mGlobalMutePref;
     Preference mWifiReevaluatePref;
@@ -113,6 +114,7 @@ public class MightyFeaturesFragment extends ScreenFragment
         addPreferencesFromResource(R.xml.settings_mighty_features);
 
         mDeviceStatsPref = findPreference(KEY_MIGHTY_DEVICE_STATS);
+        mViewEventLogPref = findPreference(KEY_MIGHTY_VIEW_EVENT_LOG);
         mExportEventLogPref = findPreference(KEY_MIGHTY_EXPORT_EVENT_LOG);
         mGlobalMutePref = findPreference(KEY_MIGHTY_GLOBAL_MUTE);
         mWifiReevaluatePref = findPreference(KEY_MIGHTY_WIFI_REEVALUATE);
@@ -139,7 +141,7 @@ public class MightyFeaturesFragment extends ScreenFragment
 
     @Override
     public void onDestroy() {
-        nullifyPreferenceListeners(mDeviceStatsPref, mExportEventLogPref, mGlobalMutePref, mWifiReevaluatePref, mBackupFolderPref,
+        nullifyPreferenceListeners(mDeviceStatsPref, mViewEventLogPref, mExportEventLogPref, mGlobalMutePref, mWifiReevaluatePref, mBackupFolderPref,
             mBackupScheduleEnabledPref, mBackupIntervalPref, mBackupNowPref, mExchangeAddFolderPref, mExchangeFoldersPref,
             mExchangeScanNowPref, mExchangeInboxPref, mManageTagsPref, mDisplayTimezoneGlobePref);
 
@@ -150,6 +152,7 @@ public class MightyFeaturesFragment extends ScreenFragment
 
     private void setupPreferences() {
         mDeviceStatsPref.setOnPreferenceClickListener(this);
+        mViewEventLogPref.setOnPreferenceClickListener(this);
         mExportEventLogPref.setOnPreferenceClickListener(this);
         mGlobalMutePref.setOnPreferenceClickListener(this);
         mWifiReevaluatePref.setOnPreferenceClickListener(this);
@@ -206,6 +209,8 @@ public class MightyFeaturesFragment extends ScreenFragment
 
         switch (pref.getKey()) {
             case KEY_MIGHTY_DEVICE_STATS -> showDeviceStatsDialog();
+
+            case KEY_MIGHTY_VIEW_EVENT_LOG -> showEventLogDialog();
 
             case KEY_MIGHTY_EXPORT_EVENT_LOG -> exportEventLog();
 
@@ -320,6 +325,61 @@ public class MightyFeaturesFragment extends ScreenFragment
                 refreshSummaries();
             })
             .show();
+    }
+
+    private void showEventLogDialog() {
+        final Context context = requireContext();
+        final Context appContext = context.getApplicationContext();
+
+        AppExecutors.getDiskIO().execute(() -> {
+            final List<EventLogStore.EventLogEntry> events =
+                EventLogStore.getEvents(appContext.getContentResolver());
+
+            AppExecutors.getMainThread().post(() -> {
+                if (!isAdded()) {
+                    return;
+                }
+
+                if (events.isEmpty()) {
+                    new MaterialAlertDialogBuilder(context)
+                        .setTitle(R.string.mighty_view_event_log)
+                        .setMessage(R.string.mighty_event_log_empty)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+                    return;
+                }
+
+                final java.text.DateFormat dateFormat =
+                    android.text.format.DateFormat.getMediumDateFormat(context);
+                final java.text.DateFormat timeFormat =
+                    android.text.format.DateFormat.getTimeFormat(context);
+                final CharSequence[] items = new CharSequence[events.size()];
+
+                for (int i = 0; i < events.size(); i++) {
+                    final EventLogStore.EventLogEntry entry = events.get(i);
+                    final Date date = new Date(entry.timestamp);
+                    final String when = dateFormat.format(date) + " " + timeFormat.format(date);
+                    final String label = entry.alarmLabel == null || entry.alarmLabel.isEmpty()
+                        ? getString(R.string.mighty_event_log_untitled_alarm)
+                        : entry.alarmLabel;
+                    final String type = entry.eventType == null ? "" : entry.eventType;
+                    final String details = entry.details;
+
+                    if (details == null || details.isEmpty()) {
+                        items[i] = getString(R.string.mighty_event_log_entry_no_details, when, type, label);
+                    } else {
+                        items[i] = getString(R.string.mighty_event_log_entry, when, type, label, details);
+                    }
+                }
+
+                new MaterialAlertDialogBuilder(context)
+                    .setTitle(R.string.mighty_view_event_log)
+                    .setItems(items, null)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .setNeutralButton(R.string.mighty_export_event_log, (dialog, which) -> exportEventLog())
+                    .show();
+            });
+        });
     }
 
     private void exportEventLog() {
@@ -477,6 +537,7 @@ public class MightyFeaturesFragment extends ScreenFragment
 
     private void nullifyAllPrefs() {
         mDeviceStatsPref = null;
+        mViewEventLogPref = null;
         mExportEventLogPref = null;
         mGlobalMutePref = null;
         mWifiReevaluatePref = null;

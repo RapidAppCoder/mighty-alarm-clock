@@ -347,6 +347,7 @@ public class PreferencesKeys {
     public static final String KEY_MIGHTY_FEATURES = "key_mighty_features";
     public static final String KEY_MIGHTY_DEVICE_STATS = "key_mighty_device_stats";
     public static final String KEY_MIGHTY_EXPORT_EVENT_LOG = "key_mighty_export_event_log";
+    public static final String KEY_MIGHTY_VIEW_EVENT_LOG = "key_mighty_view_event_log";
     public static final String KEY_MIGHTY_GLOBAL_MUTE = "key_mighty_global_mute";
     public static final String KEY_MIGHTY_WIFI_REEVALUATE = "key_mighty_wifi_reevaluate";
     public static final String KEY_MIGHTY_BACKUP_FOLDER = "key_mighty_backup_folder";
@@ -359,6 +360,13 @@ public class PreferencesKeys {
     public static final String KEY_MIGHTY_EXCHANGE_INBOX = "key_mighty_exchange_inbox";
     public static final String KEY_MIGHTY_MANAGE_TAGS = "key_mighty_manage_tags";
     public static final String KEY_DISPLAY_TIMEZONE_GLOBE = "key_display_timezone_globe";
+
+    // Alarm list filter/sort UI state (persisted across app restarts)
+    public static final String KEY_ALARM_LIST_FILTER_ENABLED = "key_alarm_list_filter_enabled";
+    public static final String KEY_ALARM_LIST_FILTER_REPEATING = "key_alarm_list_filter_repeating";
+    public static final String KEY_ALARM_LIST_FILTER_ONE_SHOT = "key_alarm_list_filter_one_shot";
+    public static final String KEY_ALARM_LIST_EXTRA_SORT = "key_alarm_list_extra_sort";
+    public static final String KEY_ALARM_LIST_FILTER_TAG_ID = "key_alarm_list_filter_tag_id";
 
     // ****************
     // ** FILE NAMES **
