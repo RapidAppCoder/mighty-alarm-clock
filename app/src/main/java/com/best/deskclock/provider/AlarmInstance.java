@@ -174,24 +174,54 @@ public final class AlarmInstance implements ClockContract.InstancesColumns {
 
     public AlarmInstance(Cursor c, boolean joinedTable) {
         if (joinedTable) {
-            mId = c.getLong(Alarm.INSTANCE_ID_INDEX);
-            mYear = c.getInt(Alarm.INSTANCE_YEAR_INDEX);
-            mMonth = c.getInt(Alarm.INSTANCE_MONTH_INDEX);
-            mDay = c.getInt(Alarm.INSTANCE_DAY_INDEX);
-            mHour = c.getInt(Alarm.INSTANCE_HOUR_INDEX);
-            mMinute = c.getInt(Alarm.INSTANCE_MINUTE_INDEX);
-            mLabel = c.getString(Alarm.INSTANCE_LABEL_INDEX);
-            mSyncByLabel = c.getInt(Alarm.INSTANCE_SYNC_BY_LABEL_INDEX) == 1;
-            mVibrate = c.getInt(Alarm.INSTANCE_VIBRATE_INDEX) == 1;
-            mVibrationPattern = c.getString(Alarm.INSTANCE_VIBRATION_PATTERN_INDEX);
-            mFlash = c.getInt(Alarm.INSTANCE_FLASH_INDEX) == 1;
-            mAutoSilenceDuration = c.getInt(Alarm.INSTANCE_AUTO_SILENCE_DURATION_INDEX);
-            mSnoozeDuration = c.getInt(Alarm.INSTANCE_SNOOZE_DURATION_INDEX);
-            mMissedAlarmCurrentCount = c.getInt(Alarm.INSTANCE_MISSED_ALARM_REPEAT_COUNT_INDEX);
-            mMissedAlarmRepeatLimit = c.getInt(Alarm.INSTANCE_MISSED_ALARM_REPEAT_LIMIT_INDEX);
-            mCrescendoDuration = c.getInt(Alarm.INSTANCE_CRESCENDO_DURATION_INDEX);
-            mAlarmVolume = c.getInt(Alarm.INSTANCE_ALARM_VOLUME_INDEX);
-            mSnoozeCount = c.getInt(Alarm.INSTANCE_SNOOZE_COUNT_INDEX);
+            // Alarms-with-instances projection: use Alarm.INSTANCE_* indexes. Do not reuse the
+            // standalone Instances QUERY_COLUMNS indexes for ringtone/state — those point at
+            // unrelated alarm columns in the joined cursor.
+            if (c.isNull(Alarm.INSTANCE_ID_INDEX)) {
+                mId = INVALID_ID;
+                mYear = 0;
+                mMonth = 0;
+                mDay = 0;
+                mHour = 0;
+                mMinute = 0;
+                mLabel = "";
+                mSyncByLabel = false;
+                mVibrate = false;
+                mVibrationPattern = DEFAULT_VIBRATION_PATTERN;
+                mFlash = true;
+                mAutoSilenceDuration = DEFAULT_AUTO_SILENCE_DURATION;
+                mSnoozeDuration = DEFAULT_ALARM_SNOOZE_DURATION;
+                mMissedAlarmCurrentCount = 0;
+                mMissedAlarmRepeatLimit = Integer.parseInt(DEFAULT_MISSED_ALARM_REPEAT_LIMIT);
+                mCrescendoDuration = DEFAULT_VOLUME_CRESCENDO_DURATION;
+                mAlarmVolume = DEFAULT_ALARM_VOLUME;
+                mSnoozeCount = 0;
+                mRingtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+                mAlarmId = INVALID_ID;
+                mAlarmState = SILENT_STATE;
+            } else {
+                mId = c.getLong(Alarm.INSTANCE_ID_INDEX);
+                mYear = c.getInt(Alarm.INSTANCE_YEAR_INDEX);
+                mMonth = c.getInt(Alarm.INSTANCE_MONTH_INDEX);
+                mDay = c.getInt(Alarm.INSTANCE_DAY_INDEX);
+                mHour = c.getInt(Alarm.INSTANCE_HOUR_INDEX);
+                mMinute = c.getInt(Alarm.INSTANCE_MINUTE_INDEX);
+                mLabel = c.getString(Alarm.INSTANCE_LABEL_INDEX);
+                mSyncByLabel = c.getInt(Alarm.INSTANCE_SYNC_BY_LABEL_INDEX) == 1;
+                mVibrate = c.getInt(Alarm.INSTANCE_VIBRATE_INDEX) == 1;
+                mVibrationPattern = c.getString(Alarm.INSTANCE_VIBRATION_PATTERN_INDEX);
+                mFlash = c.getInt(Alarm.INSTANCE_FLASH_INDEX) == 1;
+                mAutoSilenceDuration = c.getInt(Alarm.INSTANCE_AUTO_SILENCE_DURATION_INDEX);
+                mSnoozeDuration = c.getInt(Alarm.INSTANCE_SNOOZE_DURATION_INDEX);
+                mMissedAlarmCurrentCount = c.getInt(Alarm.INSTANCE_MISSED_ALARM_REPEAT_COUNT_INDEX);
+                mMissedAlarmRepeatLimit = c.getInt(Alarm.INSTANCE_MISSED_ALARM_REPEAT_LIMIT_INDEX);
+                mCrescendoDuration = c.getInt(Alarm.INSTANCE_CRESCENDO_DURATION_INDEX);
+                mAlarmVolume = c.getInt(Alarm.INSTANCE_ALARM_VOLUME_INDEX);
+                mSnoozeCount = c.getInt(Alarm.INSTANCE_SNOOZE_COUNT_INDEX);
+                mRingtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+                mAlarmId = c.getLong(Alarm.ID_INDEX);
+                mAlarmState = c.getInt(Alarm.INSTANCE_STATE_INDEX);
+            }
         } else {
             mId = c.getLong(ID_INDEX);
             mYear = c.getInt(YEAR_INDEX);
@@ -211,19 +241,19 @@ public final class AlarmInstance implements ClockContract.InstancesColumns {
             mCrescendoDuration = c.getInt(CRESCENDO_DURATION_INDEX);
             mAlarmVolume = c.getInt(ALARM_VOLUME_INDEX);
             mSnoozeCount = c.getInt(SNOOZE_COUNT_INDEX);
-        }
-        if (c.isNull(RINGTONE_INDEX)) {
-            // Should we be saving this with the current ringtone or leave it null
-            // so it changes when user changes default ringtone?
-            mRingtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-        } else {
-            mRingtone = Uri.parse(c.getString(RINGTONE_INDEX));
-        }
+            if (c.isNull(RINGTONE_INDEX)) {
+                // Should we be saving this with the current ringtone or leave it null
+                // so it changes when user changes default ringtone?
+                mRingtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+            } else {
+                mRingtone = Uri.parse(c.getString(RINGTONE_INDEX));
+            }
 
-        if (!c.isNull(ALARM_ID_INDEX)) {
-            mAlarmId = c.getLong(ALARM_ID_INDEX);
+            if (!c.isNull(ALARM_ID_INDEX)) {
+                mAlarmId = c.getLong(ALARM_ID_INDEX);
+            }
+            mAlarmState = c.getInt(ALARM_STATE_INDEX);
         }
-        mAlarmState = c.getInt(ALARM_STATE_INDEX);
     }
 
     public ContentValues createContentValues() {

@@ -439,7 +439,7 @@ public final class AlarmFragment extends DeskClockFragment
         mFilterEnabledOnly = false;
         mFilterRepeatingOnly = false;
         mFilterOneShotOnly = false;
-        mExtraSortMode = 0;
+        // Keep mExtraSortMode / sort spinner as-is — reset clears filters only.
         mFilterTagId = FILTER_TAG_ALL;
         mFilterTagAlarmIds = null;
         mSearchQuery = "";
@@ -448,7 +448,6 @@ public final class AlarmFragment extends DeskClockFragment
         mBinding.alarmFilterChipEnabled.setChecked(false);
         mBinding.alarmFilterChipRepeating.setChecked(false);
         mBinding.alarmFilterChipOneShot.setChecked(false);
-        mBinding.alarmSortSpinner.setSelection(0, false);
         if (mBinding.alarmTagSpinner.getAdapter() != null
             && mBinding.alarmTagSpinner.getAdapter().getCount() > 0) {
             mBinding.alarmTagSpinner.setSelection(0, false);
@@ -467,7 +466,6 @@ public final class AlarmFragment extends DeskClockFragment
         final boolean hasActiveFilter = mFilterEnabledOnly
             || mFilterRepeatingOnly
             || mFilterOneShotOnly
-            || mExtraSortMode != 0
             || mFilterTagId != FILTER_TAG_ALL
             || (mSearchQuery != null && !mSearchQuery.trim().isEmpty());
         mBinding.alarmFilterChipReset.setVisibility(hasActiveFilter ? VISIBLE : GONE);
@@ -492,10 +490,12 @@ public final class AlarmFragment extends DeskClockFragment
 
                 final List<String> labels = new ArrayList<>();
                 final List<Long> tagIds = new ArrayList<>();
-                labels.add(getString(R.string.mighty_tag_filter_all));
-                labels.add(getString(R.string.mighty_tag_filter_untagged));
+                labels.add(getString(R.string.mighty_tag_filter_labeled,
+                    getString(R.string.mighty_tag_filter_all)));
+                labels.add(getString(R.string.mighty_tag_filter_labeled,
+                    getString(R.string.mighty_tag_filter_untagged)));
                 for (Tag tag : tags) {
-                    labels.add(tag.name);
+                    labels.add(getString(R.string.mighty_tag_filter_labeled, tag.name));
                     tagIds.add(tag.id);
                 }
                 mTagFilterSpinnerIds = tagIds;
@@ -877,7 +877,9 @@ public final class AlarmFragment extends DeskClockFragment
         // in getAlarmsCursorLoader().
         for (data.moveToFirst(); !data.isAfterLast(); data.moveToNext()) {
             final Alarm alarm = new Alarm(data);
-            final AlarmInstance alarmInstance = new AlarmInstance(data, true);
+            final AlarmInstance alarmInstance = data.isNull(Alarm.INSTANCE_ID_INDEX)
+                ? null
+                : new AlarmInstance(data, true);
             final AlarmItemHolder itemHolder = new AlarmItemHolder(alarm, alarmInstance, mAlarmTimeClickHandler);
 
             itemHolders.add(itemHolder);

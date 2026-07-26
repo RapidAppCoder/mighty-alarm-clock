@@ -226,7 +226,7 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
      * These save calls to cursor.getColumnIndexOrThrow()
      * THEY MUST BE KEPT IN SYNC WITH ABOVE QUERY COLUMNS
      */
-    private static final int ID_INDEX = 0;
+    public static final int ID_INDEX = 0;
     private static final int YEAR_INDEX = 1;
     private static final int MONTH_INDEX = 2;
     private static final int DAY_INDEX = 3;
@@ -264,7 +264,7 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
     private static final int REPEAT_MAX_COUNT_INDEX = 35;
     private static final int INTERVAL_FIRE_COUNT_INDEX = 36;
 
-    private static final int INSTANCE_STATE_INDEX = 37;
+    public static final int INSTANCE_STATE_INDEX = 37;
     public static final int INSTANCE_ID_INDEX = 38;
     public static final int INSTANCE_YEAR_INDEX = 39;
     public static final int INSTANCE_MONTH_INDEX = 40;
@@ -1220,19 +1220,36 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
 
     /**
      * Returns the next alarm time for sorting purposes.
+     * <p>
+     * When a live instance exists with a future fire time (including snoozed alarms), that
+     * instance time is used so snoozed alarms stay ordered by when they will actually ring
+     * next, instead of falling back to the alarm's nominal schedule (which often pushes them
+     * far down the list after the original time has passed).
      */
     public Calendar getSortableNextAlarmTime(AlarmInstance instance, Calendar now) {
+        // Prefer the concrete next fire time from an active/upcoming instance (snooze, fire,
+        // upcoming silent/notification). LEFT JOIN may synthesize a zeroed instance when none
+        // exists — ignore those (id <= 0) and terminal states.
+        if (instance != null && instance.mId > 0) {
+            final int state = instance.mAlarmState;
+            final boolean upcomingState =
+                state == AlarmInstance.SILENT_STATE
+                    || state == AlarmInstance.NOTIFICATION_STATE
+                    || state == AlarmInstance.SNOOZE_STATE
+                    || state == AlarmInstance.FIRED_STATE;
+            if (upcomingState) {
+                final Calendar instanceTime = instance.getAlarmTime();
+                if (instanceTime.getTimeInMillis() > now.getTimeInMillis()) {
+                    return instanceTime;
+                }
+            }
+        }
+
         Calendar result = Calendar.getInstance(now.getTimeZone());
         result.set(Calendar.SECOND, 0);
         result.set(Calendar.MILLISECOND, 0);
 
         if (daysOfWeek.isRepeating()) {
-            // If a future instance exists (e.g. after Dismiss), use it.
-            // Otherwise, compute the next valid occurrence from "now".
-            if (instance != null && instance.getAlarmTime().getTimeInMillis() > now.getTimeInMillis()) {
-                return instance.getAlarmTime();
-            }
-
             return getNextAlarmTime(now);
         } else {
             if (isSpecifiedDate()) {

@@ -89,30 +89,21 @@
 
         </HorizontalScrollView>
 
-        <!-- Row 2: sort + tag filter -->
-        <LinearLayout
+        <!-- Row 2: sort -->
+        <Spinner
+            android:id="@+id/alarm_sort_spinner"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingTop="2dp">
+            android:paddingTop="2dp"
+            android:entries="@array/mighty_alarm_sort_options" />
 
-            <Spinner
-                android:id="@+id/alarm_sort_spinner"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:entries="@array/mighty_alarm_sort_options" />
-
-            <!-- Populated programmatically with "All tags" + every user-defined Tag. -->
-            <Spinner
-                android:id="@+id/alarm_tag_spinner"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1" />
-
-        </LinearLayout>
+        <!-- Row 3: tag filter -->
+        <!-- Populated programmatically with "All tags" + every user-defined Tag. -->
+        <Spinner
+            android:id="@+id/alarm_tag_spinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="2dp" />
 
     </LinearLayout>
 

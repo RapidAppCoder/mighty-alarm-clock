@@ -807,6 +807,7 @@
 
     <string name="mighty_tag_filter_all">Alle Tags</string>
     <string name="mighty_tag_filter_untagged">Ohne Tag</string>
+    <string name="mighty_tag_filter_labeled">Tags: %1$s</string>
 
     <string name="mighty_interval_repeat_title">Intervall-Wiederholung</string>
     <string name="mighty_interval_repeat_enabled">In Intervallen wiederholen</string>

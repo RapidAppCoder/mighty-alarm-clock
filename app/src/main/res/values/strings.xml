@@ -1478,7 +1478,7 @@
     <string name="mighty_filter_repeating">Repeating</string>
     <!-- Filter chip label: only show one-shot (non-repeating) alarms -->
     <string name="mighty_filter_one_shot">One-shot</string>
-    <!-- Chip that clears all active list filters and resets sort/tag selection -->
+    <!-- Chip that clears active list filters and tag selection (sort order is kept) -->
     <string name="mighty_filter_reset">Reset filters</string>
 
     <!-- Title of the "Mighty features" settings entry -->
@@ -1626,6 +1626,8 @@
     <!-- Alarm list: tag filter -->
     <string name="mighty_tag_filter_all">All tags</string>
     <string name="mighty_tag_filter_untagged">No tags</string>
+    <!-- Spinner row label: %1$s = tag filter option (all / untagged / tag name) -->
+    <string name="mighty_tag_filter_labeled">Tags: %1$s</string>
 
 
     <!-- Interval repeat -->
