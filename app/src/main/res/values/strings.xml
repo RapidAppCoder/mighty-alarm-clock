@@ -1456,6 +1456,15 @@
 
     <!-- Title of the dialog shown when creating a brand-new alarm, prompting for a name/label -->
     <string name="mighty_new_alarm_name_title">Name this alarm</string>
+    <!-- Step 2 of new-alarm wizard: pick time, repeat days and optional date -->
+    <string name="mighty_new_alarm_time_date_title">Time, repeat and date</string>
+    <string name="mighty_new_alarm_repeat_label">Repeat on</string>
+    <string name="mighty_new_alarm_set_date">Set a specific date</string>
+    <string name="mighty_new_alarm_pick_date">Choose date</string>
+    <!-- Step 3 of new-alarm wizard: assign category/tag -->
+    <string name="mighty_new_alarm_category_title">Category</string>
+    <string name="mighty_new_alarm_category_none">No category</string>
+    <string name="mighty_new_alarm_category_empty">No categories yet. Continue without one?</string>
     <!-- Title of the dialog allowing the user to pick an explicit snooze duration (long-press on the snooze button) -->
     <string name="mighty_choose_snooze_duration_title">Snooze for…</string>
     <!-- Suffix appended to the label of a duplicated alarm -->

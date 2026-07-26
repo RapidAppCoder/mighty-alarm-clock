@@ -14,7 +14,6 @@ import static com.best.deskclock.DeskClockApplication.getDefaultSharedPreference
 import static com.best.deskclock.settings.PreferencesDefaultValues.SORT_ALARM_BY_NAME;
 import static com.best.deskclock.settings.PreferencesDefaultValues.SORT_ALARM_BY_NEXT_ALARM_TIME;
 import static com.best.deskclock.settings.PreferencesDefaultValues.SORT_ALARM_MANUALLY;
-import static com.best.deskclock.settings.PreferencesDefaultValues.SPINNER_TIME_PICKER_STYLE;
 import static com.best.deskclock.settings.PreferencesKeys.KEY_ALARM_FONT;
 import static com.best.deskclock.settings.PreferencesKeys.KEY_ALARM_LIST_EXTRA_SORT;
 import static com.best.deskclock.settings.PreferencesKeys.KEY_ALARM_LIST_FILTER_ENABLED;
@@ -1282,18 +1281,10 @@ public final class AlarmFragment extends DeskClockFragment
     }
 
     private void startCreatingAlarm() {
-        // Clear the currently selected alarm.
+        // Clear the currently selected alarm and run the create wizard:
+        // name → time (+ optional date) → category.
         mAlarmTimeClickHandler.setSelectedAlarm(null);
-
-        final Calendar calendar = Calendar.getInstance();
-        int currentHour = calendar.get(Calendar.HOUR_OF_DAY);
-        int currentMinute = calendar.get(Calendar.MINUTE);
-
-        if (SettingsDAO.getMaterialTimePickerStyle(mPrefs).equals(SPINNER_TIME_PICKER_STYLE)) {
-            mAlarmTimeClickHandler.showSpinnerTimePickerDialog(currentHour, currentMinute);
-        } else {
-            mAlarmTimeClickHandler.showMaterialTimePicker(currentHour, currentMinute);
-        }
+        mAlarmTimeClickHandler.beginCreateAlarmWizard();
     }
 
     private void startCreatingAlarmWithDelay() {

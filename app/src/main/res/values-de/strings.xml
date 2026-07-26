@@ -668,6 +668,13 @@
     <!-- ******************************* -->
 
     <string name="mighty_new_alarm_name_title">Namen für diesen Wecker</string>
+    <string name="mighty_new_alarm_time_date_title">Zeit, Wiederholung und Datum</string>
+    <string name="mighty_new_alarm_repeat_label">Wiederholen an</string>
+    <string name="mighty_new_alarm_set_date">Bestimmtes Datum festlegen</string>
+    <string name="mighty_new_alarm_pick_date">Datum wählen</string>
+    <string name="mighty_new_alarm_category_title">Kategorie</string>
+    <string name="mighty_new_alarm_category_none">Keine Kategorie</string>
+    <string name="mighty_new_alarm_category_empty">Noch keine Kategorien. Ohne Kategorie fortfahren?</string>
     <string name="mighty_choose_snooze_duration_title">Schlummern für…</string>
     <string name="mighty_copy_suffix">(Kopie)</string>
 
