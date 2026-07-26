@@ -9,6 +9,7 @@ import android.net.Uri;
 
 import androidx.documentfile.provider.DocumentFile;
 
+import com.best.deskclock.mighty.exchange.ExchangeManager;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.Tag;
 import com.best.deskclock.utils.LogUtils;
@@ -33,8 +34,9 @@ import java.util.Locale;
  * <p>
  * Two kinds of files are written on every export:
  * <ul>
- *     <li>A dated file, e.g. {@code alarms-2026-07-22_16-30-00.json}, rotated so that only the
- *     most recent {@value #MAX_DATED_BACKUPS} dated files are kept.</li>
+ *     <li>A dated file, e.g. {@code alarms-Pixel-2026-07-22_16-30-00.json}, including the
+ *     configured exchange device name, rotated so that only the most recent
+ *     {@value #MAX_DATED_BACKUPS} dated files are kept.</li>
  *     <li>{@code alarms-latest.json}, always overwritten with the most recent export.</li>
  * </ul>
  */
@@ -103,7 +105,8 @@ public final class JsonBackupManager {
             final JSONObject json = buildJson(context);
 
             final String dateStamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(new Date());
-            writeJsonFile(context, dir, "alarms-" + dateStamp + ".json", json);
+            final String devicePart = ExchangeManager.sanitizeFileNamePart(ExchangeManager.getDeviceName(context));
+            writeJsonFile(context, dir, "alarms-" + devicePart + "-" + dateStamp + ".json", json);
             writeJsonFile(context, dir, LATEST_FILE_NAME, json);
 
             rotateOldBackups(dir);
