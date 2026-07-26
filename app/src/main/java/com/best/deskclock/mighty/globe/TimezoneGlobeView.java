@@ -2,6 +2,8 @@
 
 package com.best.deskclock.mighty.globe;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -11,6 +13,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.view.Choreographer;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
@@ -22,14 +25,20 @@ import java.util.List;
 
 /**
  * Orthographic globe with filled continent outlines and markers for selected world-clock cities.
+ * <p>
+ * Slowly auto-rotates until the user drags it; auto-rotation resumes after 30 seconds of idle
+ * time or when {@link #resumeAutoRotation()} is called (e.g. after returning to the clock tab).
  * Horizontal drag rotates the globe; tapping a city (on the globe or via {@link #focusCity})
  * animates yaw so that city faces the viewer.
  */
 public class TimezoneGlobeView extends View {
 
     private static final int BAND_COUNT = 6;
-    private static final int EDGE_SUBDIVISIONS = 8;
+    private static final int EDGE_SUBDIVISIONS = 12;
     private static final float HIT_RADIUS_DP = 18f;
+    /** One full revolution about every 90 seconds. */
+    private static final float AUTO_ROTATION_DEG_PER_SEC = 4f;
+    private static final long AUTO_ROTATION_RESUME_DELAY_MS = 30_000L;
 
     /**
      * Continent outlines as closed [lat, lon] rings (more precise than the previous coarse blobs).
@@ -155,6 +164,14 @@ public class TimezoneGlobeView extends View {
     private final Path mContinentPath = new Path();
     private final Path mSphereClipPath = new Path();
 
+    /** Reusable unit-sphere buffers for hemisphere clipping (x, y, depth). */
+    private float[] mInX = new float[256];
+    private float[] mInY = new float[256];
+    private float[] mInZ = new float[256];
+    private float[] mOutX = new float[256];
+    private float[] mOutY = new float[256];
+    private float[] mOutZ = new float[256];
+
     private float mYawDegrees = 0f;
     private float mLastTouchX;
     private float mDownX;
@@ -163,6 +180,30 @@ public class TimezoneGlobeView extends View {
     private List<City> mCities = new ArrayList<>();
     private String mFocusedCityId;
     private ValueAnimator mYawAnimator;
+
+    private boolean mAutoRotating;
+    private long mLastFrameTimeNanos;
+    private final Runnable mResumeAutoRotationRunnable = this::resumeAutoRotation;
+    private final Choreographer.FrameCallback mAutoRotateCallback = new Choreographer.FrameCallback() {
+        @Override
+        public void doFrame(long frameTimeNanos) {
+            if (!mAutoRotating) {
+                return;
+            }
+            if (mLastFrameTimeNanos != 0L) {
+                float dtSec = (frameTimeNanos - mLastFrameTimeNanos) / 1_000_000_000f;
+                if (dtSec > 0.1f) {
+                    dtSec = 0.1f;
+                }
+                if (dtSec > 0f) {
+                    mYawDegrees = normalizeDegrees(mYawDegrees + AUTO_ROTATION_DEG_PER_SEC * dtSec);
+                    invalidate();
+                }
+            }
+            mLastFrameTimeNanos = frameTimeNanos;
+            Choreographer.getInstance().postFrameCallback(this);
+        }
+    };
 
     public TimezoneGlobeView(Context context) {
         this(context, null);
@@ -224,6 +265,26 @@ public class TimezoneGlobeView extends View {
     }
 
     /**
+     * Starts or restarts slow auto-rotation immediately (e.g. after a tab/screen change).
+     */
+    public void resumeAutoRotation() {
+        removeCallbacks(mResumeAutoRotationRunnable);
+        if (!isShown() || getWindowVisibility() != VISIBLE || getVisibility() != VISIBLE) {
+            stopAutoRotateLoop();
+            return;
+        }
+        startAutoRotateLoop();
+    }
+
+    /**
+     * Stops auto-rotation without scheduling a delayed resume (e.g. leaving the clock tab).
+     */
+    public void pauseAutoRotation() {
+        removeCallbacks(mResumeAutoRotationRunnable);
+        stopAutoRotateLoop();
+    }
+
+    /**
      * Animates the globe so {@code city} faces the viewer and highlights its marker.
      */
     public void focusCity(City city) {
@@ -233,7 +294,33 @@ public class TimezoneGlobeView extends View {
         mFocusedCityId = city.getId();
         final float[] coords = CityCoordinates.forCity(city);
         final float targetYaw = normalizeDegrees(-coords[1]);
+        onUserInteracted();
         animateYawTo(targetYaw);
+    }
+
+    private void onUserInteracted() {
+        stopAutoRotateLoop();
+        removeCallbacks(mResumeAutoRotationRunnable);
+        postDelayed(mResumeAutoRotationRunnable, AUTO_ROTATION_RESUME_DELAY_MS);
+    }
+
+    private void startAutoRotateLoop() {
+        if (mAutoRotating) {
+            return;
+        }
+        mAutoRotating = true;
+        mLastFrameTimeNanos = 0L;
+        Choreographer.getInstance().postFrameCallback(mAutoRotateCallback);
+    }
+
+    private void stopAutoRotateLoop() {
+        if (!mAutoRotating) {
+            mLastFrameTimeNanos = 0L;
+            return;
+        }
+        mAutoRotating = false;
+        mLastFrameTimeNanos = 0L;
+        Choreographer.getInstance().removeFrameCallback(mAutoRotateCallback);
     }
 
     private void animateYawTo(float targetYaw) {
@@ -258,7 +345,45 @@ public class TimezoneGlobeView extends View {
             mYawDegrees = normalizeDegrees(start + change * t);
             invalidate();
         });
+        mYawAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationCancel(Animator animation) {
+                mYawAnimator = null;
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                mYawAnimator = null;
+            }
+        });
         mYawAnimator.start();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        pauseAutoRotation();
+        if (mYawAnimator != null) {
+            mYawAnimator.cancel();
+            mYawAnimator = null;
+        }
+        super.onDetachedFromWindow();
+    }
+
+    @Override
+    protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        // Pause when the window is not visible; restart is owned by the host (tab/resume).
+        if (visibility != VISIBLE) {
+            pauseAutoRotation();
+        }
+    }
+
+    @Override
+    protected void onVisibilityChanged(View changedView, int visibility) {
+        super.onVisibilityChanged(changedView, visibility);
+        if (changedView == this && visibility != VISIBLE) {
+            pauseAutoRotation();
+        }
     }
 
     @Override
@@ -307,82 +432,180 @@ public class TimezoneGlobeView extends View {
     }
 
     /**
-     * Projects a closed lat/lon ring with edge subdivision and draws filled + stroked visible segments.
+     * Subdivides a lat/lon ring, clips it to the front hemisphere, and draws a closed fill.
+     * Clipping against the limb avoids torn/open paths that made continent pieces vanish while rotating.
      */
     private void drawContinentRing(Canvas canvas, float[][] ring, float cx, float cy, float radius) {
         if (ring.length < 3) {
             return;
         }
 
-        mContinentPath.reset();
-        boolean started = false;
-        float firstX = 0f;
-        float firstY = 0f;
-        float prevX = 0f;
-        float prevY = 0f;
-        boolean prevFront = false;
+        final int inCount = buildSubdividedSphereRing(ring);
+        if (inCount < 3) {
+            return;
+        }
 
-        for (int i = 0; i < ring.length - 1; i++) {
+        final int outCount = clipToFrontHemisphere(inCount);
+        if (outCount < 3) {
+            return;
+        }
+
+        buildContinentPath(outCount, cx, cy, radius);
+        if (!mContinentPath.isEmpty()) {
+            canvas.drawPath(mContinentPath, mContinentFillPaint);
+            canvas.drawPath(mContinentPath, mContinentStrokePaint);
+        }
+    }
+
+    /**
+     * Fills {@link #mInX}/{@link #mInY}/{@link #mInZ} with unit-sphere samples along {@code ring}.
+     *
+     * @return number of points written (ring is open; last equals first is skipped)
+     */
+    private int buildSubdividedSphereRing(float[][] ring) {
+        int count = 0;
+        final int edgeCount = ring.length - 1;
+        final int estimated = edgeCount * EDGE_SUBDIVISIONS + 1;
+        ensureClipCapacity(estimated);
+
+        for (int i = 0; i < edgeCount; i++) {
             final float lat0 = ring[i][0];
             final float lon0 = ring[i][1];
             final float lat1 = ring[i + 1][0];
             final float lon1 = ring[i + 1][1];
 
+            float lonDelta = lon1 - lon0;
+            if (lonDelta > 180f) {
+                lonDelta -= 360f;
+            } else if (lonDelta < -180f) {
+                lonDelta += 360f;
+            }
+
             for (int s = 0; s < EDGE_SUBDIVISIONS; s++) {
                 final float t = s / (float) EDGE_SUBDIVISIONS;
                 final float lat = lat0 + (lat1 - lat0) * t;
-                float lonDelta = lon1 - lon0;
-                if (lonDelta > 180f) {
-                    lonDelta -= 360f;
-                } else if (lonDelta < -180f) {
-                    lonDelta += 360f;
-                }
                 final float lon = lon0 + lonDelta * t;
-
-                final float[] proj = project(lat, lon, cx, cy, radius, false);
-                final boolean front = proj != null;
-                if (front) {
-                    if (!started) {
-                        mContinentPath.moveTo(proj[0], proj[1]);
-                        firstX = proj[0];
-                        firstY = proj[1];
-                        started = true;
-                    } else if (prevFront) {
-                        mContinentPath.lineTo(proj[0], proj[1]);
-                    } else {
-                        // Came back from the far side: start a new sub-path.
-                        flushContinentPath(canvas);
-                        mContinentPath.moveTo(proj[0], proj[1]);
-                        firstX = proj[0];
-                        firstY = proj[1];
-                        started = true;
-                    }
-                    prevX = proj[0];
-                    prevY = proj[1];
-                } else if (started && prevFront) {
-                    flushContinentPath(canvas);
-                    started = false;
-                }
-                prevFront = front;
+                count = appendSpherePoint(count, lat, lon);
             }
         }
-
-        if (started) {
-            // Close only if the first and last points are both on the front and nearby.
-            final float dist = (float) Math.hypot(prevX - firstX, prevY - firstY);
-            if (dist < radius * 0.35f) {
-                mContinentPath.close();
-            }
-            flushContinentPath(canvas);
-        }
+        // Close sample for clipping (last vertex of ring, usually equals first).
+        count = appendSpherePoint(count, ring[ring.length - 1][0], ring[ring.length - 1][1]);
+        return count;
     }
 
-    private void flushContinentPath(Canvas canvas) {
-        if (!mContinentPath.isEmpty()) {
-            canvas.drawPath(mContinentPath, mContinentFillPaint);
-            canvas.drawPath(mContinentPath, mContinentStrokePaint);
-            mContinentPath.reset();
+    private int appendSpherePoint(int count, float latitude, float longitude) {
+        ensureClipCapacity(count + 1);
+        final double lonRad = Math.toRadians(longitude + mYawDegrees);
+        final double latRad = Math.toRadians(latitude);
+        final float x = (float) (Math.cos(latRad) * Math.sin(lonRad));
+        final float y = (float) Math.sin(latRad);
+        final float z = (float) (Math.cos(latRad) * Math.cos(lonRad));
+        // Skip near-duplicates from closed rings / dense samples.
+        if (count > 0) {
+            final float dx = x - mInX[count - 1];
+            final float dy = y - mInY[count - 1];
+            final float dz = z - mInZ[count - 1];
+            if (dx * dx + dy * dy + dz * dz < 1e-10f) {
+                return count;
+            }
         }
+        mInX[count] = x;
+        mInY[count] = y;
+        mInZ[count] = z;
+        return count + 1;
+    }
+
+    /**
+     * Sutherland–Hodgman clip of the unit-sphere polygon to depth {@code z >= 0}.
+     *
+     * @return number of points in the output buffers
+     */
+    private int clipToFrontHemisphere(int inCount) {
+        if (inCount < 3) {
+            return 0;
+        }
+        ensureClipCapacity(inCount * 2);
+
+        int outCount = 0;
+        float prevX = mInX[inCount - 1];
+        float prevY = mInY[inCount - 1];
+        float prevZ = mInZ[inCount - 1];
+        boolean prevInside = prevZ >= 0f;
+
+        for (int i = 0; i < inCount; i++) {
+            final float currX = mInX[i];
+            final float currY = mInY[i];
+            final float currZ = mInZ[i];
+            final boolean currInside = currZ >= 0f;
+
+            if (currInside != prevInside) {
+                outCount = appendIntersection(outCount, prevX, prevY, prevZ, currX, currY, currZ);
+            }
+            if (currInside) {
+                ensureClipCapacity(outCount + 1);
+                mOutX[outCount] = currX;
+                mOutY[outCount] = currY;
+                mOutZ[outCount] = currZ;
+                outCount++;
+            }
+
+            prevX = currX;
+            prevY = currY;
+            prevZ = currZ;
+            prevInside = currInside;
+        }
+        return outCount;
+    }
+
+    private int appendIntersection(int outCount, float ax, float ay, float az,
+                                   float bx, float by, float bz) {
+        final float denom = az - bz;
+        final float t = Math.abs(denom) < 1e-8f ? 0.5f : az / denom;
+        float x = ax + t * (bx - ax);
+        float y = ay + t * (by - ay);
+        // Snap onto the silhouette circle so limb edges stay on the globe outline.
+        final float len = (float) Math.hypot(x, y);
+        if (len > 1e-6f) {
+            x /= len;
+            y /= len;
+        }
+        ensureClipCapacity(outCount + 1);
+        mOutX[outCount] = x;
+        mOutY[outCount] = y;
+        mOutZ[outCount] = 0f;
+        return outCount + 1;
+    }
+
+    private void buildContinentPath(int count, float cx, float cy, float radius) {
+        mContinentPath.reset();
+        final float scale = radius * 0.92f;
+        mContinentPath.moveTo(cx + mOutX[0] * scale, cy - mOutY[0] * scale);
+        for (int i = 1; i < count; i++) {
+            mContinentPath.lineTo(cx + mOutX[i] * scale, cy - mOutY[i] * scale);
+        }
+        mContinentPath.close();
+    }
+
+    private void ensureClipCapacity(int needed) {
+        if (needed <= mInX.length) {
+            return;
+        }
+        int cap = mInX.length;
+        while (cap < needed) {
+            cap *= 2;
+        }
+        mInX = copyOf(mInX, cap);
+        mInY = copyOf(mInY, cap);
+        mInZ = copyOf(mInZ, cap);
+        mOutX = copyOf(mOutX, cap);
+        mOutY = copyOf(mOutY, cap);
+        mOutZ = copyOf(mOutZ, cap);
+    }
+
+    private static float[] copyOf(float[] src, int newLength) {
+        final float[] dst = new float[newLength];
+        System.arraycopy(src, 0, dst, 0, src.length);
+        return dst;
     }
 
     /**
@@ -478,14 +701,19 @@ public class TimezoneGlobeView extends View {
             case MotionEvent.ACTION_MOVE -> {
                 final float dx = event.getX() - mLastTouchX;
                 if (Math.abs(event.getX() - mDownX) > dp(4f) || Math.abs(event.getY() - mDownY) > dp(4f)) {
+                    if (!mMoved) {
+                        onUserInteracted();
+                    }
                     mMoved = true;
                 }
                 mLastTouchX = event.getX();
-                if (mYawAnimator != null) {
-                    mYawAnimator.cancel();
+                if (mMoved) {
+                    if (mYawAnimator != null) {
+                        mYawAnimator.cancel();
+                    }
+                    mYawDegrees = normalizeDegrees(mYawDegrees + dx * 0.5f);
+                    invalidate();
                 }
-                mYawDegrees = normalizeDegrees(mYawDegrees + dx * 0.5f);
-                invalidate();
                 return true;
             }
             case MotionEvent.ACTION_UP -> {

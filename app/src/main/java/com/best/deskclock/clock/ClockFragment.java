@@ -42,6 +42,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.best.deskclock.R;
 import com.best.deskclock.base.DeskClockFragment;
 import com.best.deskclock.data.City;
+import com.best.deskclock.data.CityListener;
 import com.best.deskclock.data.DataModel;
 import com.best.deskclock.data.SettingsDAO;
 import com.best.deskclock.databinding.ClockFragmentBinding;
@@ -49,6 +50,7 @@ import com.best.deskclock.dialogfragment.LabelDialogFragment;
 import com.best.deskclock.uicomponents.AnalogClock;
 import com.best.deskclock.uicomponents.AutoSizingTextClock;
 import com.best.deskclock.uicomponents.CustomTooltip;
+import com.best.deskclock.uidata.TabListener;
 import com.best.deskclock.uidata.UiDataModel;
 import com.best.deskclock.utils.AlarmUtils;
 import com.best.deskclock.utils.ClockUtils;
@@ -103,6 +105,23 @@ public final class ClockFragment extends DeskClockFragment {
     private boolean mIsTablet;
     private boolean mHasBlackAccentColor;
     private boolean mShowTimezoneGlobe;
+
+    /** Keeps the timezone globe in sync when the user adds/removes world-clock cities. */
+    private final CityListener mCityListener = this::updateTimezoneGlobe;
+
+    /**
+     * Restarts globe auto-rotation when returning to the clock tab; pauses it on other tabs.
+     */
+    private final TabListener mGlobeTabListener = newSelectedTab -> {
+        if (mBinding == null || mBinding.timezoneGlobeView == null) {
+            return;
+        }
+        if (newSelectedTab == CLOCKS) {
+            mBinding.timezoneGlobeView.resumeAutoRotation();
+        } else {
+            mBinding.timezoneGlobeView.pauseAutoRotation();
+        }
+    };
 
     /**
      * The public no-arg constructor required by all fragments.
@@ -208,8 +227,13 @@ public final class ClockFragment extends DeskClockFragment {
         mBinding.cityRecyclerView.setAdapter(mCityAdapter);
 
         updateTimezoneGlobe();
+        if (isTabSelected()) {
+            mBinding.timezoneGlobeView.resumeAutoRotation();
+        }
 
         DataModel.getDataModel().addCityListener(mCityAdapter);
+        DataModel.getDataModel().addCityListener(mCityListener);
+        UiDataModel.getUiDataModel().addTabListener(mGlobeTabListener);
 
         mTouchHelperCallback = new CityItemTouchHelper(mCityAdapter, mSettings.showHomeClock);
         mItemTouchHelper = new ItemTouchHelper(mTouchHelperCallback);
@@ -258,6 +282,10 @@ public final class ClockFragment extends DeskClockFragment {
 
         updateEmptyStateVisibility();
 
+        if (isTabSelected() && mBinding != null && mBinding.timezoneGlobeView != null) {
+            mBinding.timezoneGlobeView.resumeAutoRotation();
+        }
+
         if (getView() != null) {
             getView().post(() -> {
                 if (!isAdded()) {
@@ -281,7 +309,13 @@ public final class ClockFragment extends DeskClockFragment {
     @Override
     public void onDestroyView() {
         UiDataModel.getUiDataModel().removePeriodicCallback(mQuarterHourUpdater);
+        UiDataModel.getUiDataModel().removeTabListener(mGlobeTabListener);
         DataModel.getDataModel().removeCityListener(mCityAdapter);
+        DataModel.getDataModel().removeCityListener(mCityListener);
+
+        if (mBinding != null && mBinding.timezoneGlobeView != null) {
+            mBinding.timezoneGlobeView.pauseAutoRotation();
+        }
 
         mPrefs.unregisterOnSharedPreferenceChangeListener(mPrefListener);
 
@@ -384,7 +418,14 @@ public final class ClockFragment extends DeskClockFragment {
 
         mBinding.timezoneGlobeView.setVisibility(mShowTimezoneGlobe ? VISIBLE : GONE);
         if (mShowTimezoneGlobe) {
-            mBinding.timezoneGlobeView.setCities(mSelectedCities);
+            // Always read the latest selection from the data model — mSelectedCities is only the
+            // snapshot taken in onCreate and would otherwise leave the globe stale after add/remove.
+            mBinding.timezoneGlobeView.setCities(DataModel.getDataModel().getSelectedCities());
+            if (isTabSelected()) {
+                mBinding.timezoneGlobeView.resumeAutoRotation();
+            }
+        } else {
+            mBinding.timezoneGlobeView.pauseAutoRotation();
         }
     }
 
