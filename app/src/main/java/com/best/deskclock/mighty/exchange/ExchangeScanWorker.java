@@ -16,8 +16,8 @@ import com.best.deskclock.utils.LogUtils;
 import java.util.concurrent.TimeUnit;
 
 /**
- * WorkManager worker that periodically scans every configured {@link ExchangeManager.ExchangeFolder}
- * for new handoff files.
+ * WorkManager worker that periodically refreshes this device's presence file and scans every
+ * configured {@link ExchangeManager.ExchangeFolder} for new {@code AlarmTransfer-*.json} files.
  */
 public final class ExchangeScanWorker extends Worker {
 
@@ -31,8 +31,9 @@ public final class ExchangeScanWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
-        LogUtils.i("ExchangeScanWorker: scanning exchange folders");
+        LogUtils.i("ExchangeScanWorker: refreshing presence and scanning exchange folders");
         try {
+            // scanAll refreshes Device-*.json presence before scanning AlarmTransfer files.
             ExchangeManager.scanAll(getApplicationContext());
             return Result.success();
         } catch (Exception e) {

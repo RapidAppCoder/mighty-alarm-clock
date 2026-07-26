@@ -1257,17 +1257,49 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
 
         new MaterialAlertDialogBuilder(context)
             .setTitle(R.string.mighty_move_to_exchange_title)
-            .setItems(names, (dialog, which) -> moveAlarmToExchangeFolder(folders.get(which)))
+            .setItems(names, (dialog, which) -> showMoveToExchangeRecipientDialog(folders.get(which)))
             .setNegativeButton(android.R.string.cancel, null)
             .show();
     }
 
-    private void moveAlarmToExchangeFolder(ExchangeManager.ExchangeFolder folder) {
+    private void showMoveToExchangeRecipientDialog(ExchangeManager.ExchangeFolder folder) {
+        final Context context = requireContext();
+        final Context appContext = context.getApplicationContext();
+
+        AppExecutors.getDiskIO().execute(() -> {
+            ExchangeManager.refreshPresence(appContext);
+            final List<ExchangeManager.Device> devices = ExchangeManager.listDevices(appContext, folder);
+
+            AppExecutors.getMainThread().post(() -> {
+                if (!isAdded()) {
+                    return;
+                }
+
+                final CharSequence[] items = new CharSequence[devices.size() + 1];
+                items[0] = getString(R.string.mighty_move_to_exchange_any_device);
+                for (int i = 0; i < devices.size(); i++) {
+                    items[i + 1] = devices.get(i).deviceName;
+                }
+
+                new MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.mighty_move_to_exchange_recipient_title)
+                    .setItems(items, (dialog, which) -> {
+                        final ExchangeManager.Device target = which == 0 ? null : devices.get(which - 1);
+                        moveAlarmToExchangeFolder(folder, target);
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            });
+        });
+    }
+
+    private void moveAlarmToExchangeFolder(ExchangeManager.ExchangeFolder folder,
+                                           @Nullable ExchangeManager.Device target) {
         final Context appContext = requireContext().getApplicationContext();
         final Alarm alarmToMove = mAlarm;
 
         AppExecutors.getDiskIO().execute(() -> {
-            final boolean success = ExchangeManager.moveAlarmTo(appContext, alarmToMove, folder);
+            final boolean success = ExchangeManager.moveAlarmTo(appContext, alarmToMove, folder, target);
 
             AppExecutors.getMainThread().post(() -> {
                 if (!isAdded()) {

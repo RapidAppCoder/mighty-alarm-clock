@@ -11,13 +11,16 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.widget.EditText;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.documentfile.provider.DocumentFile;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.SwitchPreferenceCompat;
@@ -36,8 +39,12 @@ import com.best.deskclock.provider.Tag;
 import com.best.deskclock.uicomponents.toast.CustomToast;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Settings screen exposing the "Mighty" fork features that don't fit naturally into the existing
@@ -56,6 +63,7 @@ public class MightyFeaturesFragment extends ScreenFragment
     SwitchPreferenceCompat mBackupScheduleEnabledPref;
     ListPreference mBackupIntervalPref;
     Preference mBackupNowPref;
+    Preference mExchangeDeviceNamePref;
     Preference mExchangeAddFolderPref;
     Preference mExchangeFoldersPref;
     Preference mExchangeScanNowPref;
@@ -122,6 +130,7 @@ public class MightyFeaturesFragment extends ScreenFragment
         mBackupScheduleEnabledPref = findPreference(KEY_MIGHTY_BACKUP_SCHEDULE_ENABLED);
         mBackupIntervalPref = findPreference(KEY_MIGHTY_BACKUP_INTERVAL_HOURS);
         mBackupNowPref = findPreference(KEY_MIGHTY_BACKUP_NOW);
+        mExchangeDeviceNamePref = findPreference(KEY_MIGHTY_EXCHANGE_DEVICE_NAME);
         mExchangeAddFolderPref = findPreference(KEY_MIGHTY_EXCHANGE_ADD_FOLDER);
         mExchangeFoldersPref = findPreference(KEY_MIGHTY_EXCHANGE_FOLDERS);
         mExchangeScanNowPref = findPreference(KEY_MIGHTY_EXCHANGE_SCAN_NOW);
@@ -142,8 +151,8 @@ public class MightyFeaturesFragment extends ScreenFragment
     @Override
     public void onDestroy() {
         nullifyPreferenceListeners(mDeviceStatsPref, mViewEventLogPref, mExportEventLogPref, mGlobalMutePref, mWifiReevaluatePref, mBackupFolderPref,
-            mBackupScheduleEnabledPref, mBackupIntervalPref, mBackupNowPref, mExchangeAddFolderPref, mExchangeFoldersPref,
-            mExchangeScanNowPref, mExchangeInboxPref, mManageTagsPref, mDisplayTimezoneGlobePref);
+            mBackupScheduleEnabledPref, mBackupIntervalPref, mBackupNowPref, mExchangeDeviceNamePref, mExchangeAddFolderPref,
+            mExchangeFoldersPref, mExchangeScanNowPref, mExchangeInboxPref, mManageTagsPref, mDisplayTimezoneGlobePref);
 
         nullifyAllPrefs();
 
@@ -160,7 +169,9 @@ public class MightyFeaturesFragment extends ScreenFragment
         mBackupScheduleEnabledPref.setOnPreferenceChangeListener(this);
         mBackupIntervalPref.setOnPreferenceChangeListener(this);
         mBackupNowPref.setOnPreferenceClickListener(this);
+        mExchangeDeviceNamePref.setOnPreferenceClickListener(this);
         mExchangeAddFolderPref.setOnPreferenceClickListener(this);
+        mExchangeFoldersPref.setOnPreferenceClickListener(this);
         mExchangeScanNowPref.setOnPreferenceClickListener(this);
         mExchangeInboxPref.setOnPreferenceClickListener(this);
         mManageTagsPref.setOnPreferenceClickListener(this);
@@ -185,6 +196,8 @@ public class MightyFeaturesFragment extends ScreenFragment
         mBackupScheduleEnabledPref.setChecked(JsonBackupManager.isScheduleEnabled(context));
         mBackupIntervalPref.setValue(String.valueOf(JsonBackupManager.getIntervalHours(context)));
         mBackupIntervalPref.setSummary(mBackupIntervalPref.getEntry());
+
+        mExchangeDeviceNamePref.setSummary(ExchangeManager.getDeviceName(context));
 
         final List<ExchangeManager.ExchangeFolder> folders = ExchangeManager.getFolders(context);
         mExchangeFoldersPref.setSummary(getString(R.string.mighty_exchange_folders_summary, folders.size()));
@@ -234,7 +247,11 @@ public class MightyFeaturesFragment extends ScreenFragment
                 });
             }
 
+            case KEY_MIGHTY_EXCHANGE_DEVICE_NAME -> showExchangeDeviceNameDialog();
+
             case KEY_MIGHTY_EXCHANGE_ADD_FOLDER -> mExchangeFolderPicker.launch(createOpenTreeIntent());
+
+            case KEY_MIGHTY_EXCHANGE_FOLDERS -> showManageExchangeFoldersDialog();
 
             case KEY_MIGHTY_EXCHANGE_SCAN_NOW -> {
                 final Context appContext = context.getApplicationContext();
@@ -435,10 +452,37 @@ public class MightyFeaturesFragment extends ScreenFragment
             .show();
     }
 
+    private void showExchangeDeviceNameDialog() {
+        final Context context = requireContext();
+        final EditText input = new EditText(context);
+        input.setHint(R.string.mighty_exchange_device_name_hint);
+        input.setText(ExchangeManager.getDeviceName(context));
+        input.setSelection(input.getText() != null ? input.getText().length() : 0);
+
+        new MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.mighty_exchange_device_name_dialog_title)
+            .setView(input)
+            .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                final String name = input.getText() != null ? input.getText().toString().trim() : "";
+                final Context appContext = context.getApplicationContext();
+                AppExecutors.getDiskIO().execute(() -> {
+                    ExchangeManager.setDeviceName(appContext, name);
+                    AppExecutors.getMainThread().post(this::refreshSummaries);
+                });
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
     private void showAddExchangeFolderNameDialog(Uri treeUri) {
         final Context context = requireContext();
         final EditText input = new EditText(context);
         input.setHint(R.string.mighty_exchange_folder_name_hint);
+        final String suggestedName = resolveTreeDisplayName(context, treeUri);
+        if (suggestedName != null) {
+            input.setText(suggestedName);
+            input.setSelection(0, suggestedName.length());
+        }
 
         new MaterialAlertDialogBuilder(context)
             .setTitle(R.string.mighty_exchange_add_folder_title)
@@ -446,14 +490,164 @@ public class MightyFeaturesFragment extends ScreenFragment
             .setPositiveButton(android.R.string.ok, (dialog, which) -> {
                 String name = input.getText() != null ? input.getText().toString().trim() : "";
                 if (name.isEmpty()) {
-                    name = treeUri.toString();
+                    name = suggestedName != null ? suggestedName : treeUri.toString();
                 }
-                ExchangeManager.addFolder(context, name, treeUri, ExchangeManager.ImportPolicy.ASK);
-                ExchangeScanWorker.schedulePeriodic(context);
-                refreshSummaries();
+                showAddExchangeFolderPolicyDialog(treeUri, name);
             })
             .setNegativeButton(android.R.string.cancel, null)
             .show();
+    }
+
+    @Nullable
+    private static String resolveTreeDisplayName(Context context, Uri treeUri) {
+        try {
+            final DocumentFile root = DocumentFile.fromTreeUri(context, treeUri);
+            if (root != null) {
+                final String name = root.getName();
+                if (!TextUtils.isEmpty(name)) {
+                    final String trimmed = name.trim();
+                    if (!trimmed.isEmpty()) {
+                        return trimmed;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Fall through to URI last segment.
+        }
+        final String last = treeUri.getLastPathSegment();
+        if (TextUtils.isEmpty(last)) {
+            return null;
+        }
+        // Tree URIs often look like "primary:FolderName" or ".../FolderName".
+        final int colon = last.lastIndexOf(':');
+        final String candidate = colon >= 0 && colon + 1 < last.length()
+            ? last.substring(colon + 1)
+            : last;
+        final int slash = candidate.lastIndexOf('/');
+        final String name = slash >= 0 && slash + 1 < candidate.length()
+            ? candidate.substring(slash + 1)
+            : candidate;
+        final String trimmed = name.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void showAddExchangeFolderPolicyDialog(Uri treeUri, String folderName) {
+        final Context context = requireContext();
+        final CharSequence[] policies = {
+            getString(R.string.mighty_exchange_import_policy_ask),
+            getString(R.string.mighty_exchange_import_policy_auto),
+        };
+
+        new MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.mighty_exchange_folder_change_policy)
+            .setItems(policies, (dialog, which) -> {
+                final ExchangeManager.ImportPolicy policy = which == 1
+                    ? ExchangeManager.ImportPolicy.AUTO
+                    : ExchangeManager.ImportPolicy.ASK;
+                final Context appContext = context.getApplicationContext();
+                AppExecutors.getDiskIO().execute(() -> {
+                    ExchangeManager.addFolder(appContext, folderName, treeUri, policy);
+                    ExchangeScanWorker.schedulePeriodic(appContext);
+                    AppExecutors.getMainThread().post(this::refreshSummaries);
+                });
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    private void showManageExchangeFoldersDialog() {
+        final Context context = requireContext();
+        final List<ExchangeManager.ExchangeFolder> folders = ExchangeManager.getFolders(context);
+
+        if (folders.isEmpty()) {
+            new MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.mighty_exchange_folders_title)
+                .setMessage(R.string.mighty_exchange_folders_empty)
+                .setPositiveButton(R.string.mighty_exchange_add_folder_title,
+                    (dialog, which) -> mExchangeFolderPicker.launch(createOpenTreeIntent()))
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+            return;
+        }
+
+        final CharSequence[] items = new CharSequence[folders.size()];
+        for (int i = 0; i < folders.size(); i++) {
+            final ExchangeManager.ExchangeFolder folder = folders.get(i);
+            items[i] = getString(R.string.mighty_exchange_folder_list_item,
+                folder.name, importPolicyLabel(folder.importPolicy));
+        }
+
+        new MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.mighty_exchange_folders_title)
+            .setItems(items, (dialog, which) -> showExchangeFolderActionsDialog(which))
+            .setPositiveButton(R.string.mighty_exchange_add_folder_title,
+                (d, w) -> mExchangeFolderPicker.launch(createOpenTreeIntent()))
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    private void showExchangeFolderActionsDialog(int folderIndex) {
+        final Context context = requireContext();
+        final List<ExchangeManager.ExchangeFolder> folders = ExchangeManager.getFolders(context);
+        if (folderIndex < 0 || folderIndex >= folders.size()) {
+            return;
+        }
+        final ExchangeManager.ExchangeFolder folder = folders.get(folderIndex);
+
+        final CharSequence[] actions = {
+            getString(R.string.mighty_exchange_folder_change_policy),
+            getString(R.string.delete),
+        };
+
+        new MaterialAlertDialogBuilder(context)
+            .setTitle(folder.name)
+            .setItems(actions, (dialog, which) -> {
+                if (which == 0) {
+                    showExchangeFolderPolicyDialog(folderIndex);
+                } else if (which == 1) {
+                    ExchangeManager.removeFolder(context, folderIndex);
+                    CustomToast.show(context, R.string.mighty_exchange_folder_deleted);
+                    refreshSummaries();
+                    showManageExchangeFoldersDialog();
+                }
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    private void showExchangeFolderPolicyDialog(int folderIndex) {
+        final Context context = requireContext();
+        final List<ExchangeManager.ExchangeFolder> folders = ExchangeManager.getFolders(context);
+        if (folderIndex < 0 || folderIndex >= folders.size()) {
+            return;
+        }
+
+        final CharSequence[] policies = {
+            getString(R.string.mighty_exchange_import_policy_ask),
+            getString(R.string.mighty_exchange_import_policy_auto),
+        };
+        final int checked = folders.get(folderIndex).importPolicy == ExchangeManager.ImportPolicy.AUTO ? 1 : 0;
+
+        new MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.mighty_exchange_folder_change_policy)
+            .setSingleChoiceItems(policies, checked, (dialog, which) -> {
+                final ExchangeManager.ImportPolicy policy = which == 1
+                    ? ExchangeManager.ImportPolicy.AUTO
+                    : ExchangeManager.ImportPolicy.ASK;
+                ExchangeManager.setFolderImportPolicy(context, folderIndex, policy);
+                dialog.dismiss();
+                refreshSummaries();
+                showManageExchangeFoldersDialog();
+            })
+            .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    private String importPolicyLabel(ExchangeManager.ImportPolicy policy) {
+        if (policy == ExchangeManager.ImportPolicy.AUTO) {
+            return getString(R.string.mighty_exchange_import_policy_auto);
+        }
+        return getString(R.string.mighty_exchange_import_policy_ask);
     }
 
     private void showExchangeInboxDialog() {
@@ -465,18 +659,50 @@ public class MightyFeaturesFragment extends ScreenFragment
         }
 
         final ExchangeManager.PendingImport first = inbox.get(0);
+        final String sender = first.fromDeviceName != null
+            ? first.fromDeviceName
+            : getString(R.string.mighty_exchange_unknown_sender);
+        final String alarmSummary = formatInboxAlarmSummary(first.alarmJson);
+        final String message;
+        if (first.toDeviceName != null && !first.toDeviceName.isEmpty()) {
+            message = getString(R.string.mighty_exchange_inbox_item_message_to,
+                first.folderName, sender, first.toDeviceName, alarmSummary);
+        } else {
+            message = getString(R.string.mighty_exchange_inbox_item_message,
+                first.folderName, sender, alarmSummary);
+        }
+
         new MaterialAlertDialogBuilder(context)
             .setTitle(R.string.mighty_exchange_inbox_title)
-            .setMessage(getString(R.string.mighty_exchange_inbox_item_message, first.folderName, first.alarmJson))
+            .setMessage(message)
             .setPositiveButton(R.string.mighty_accept, (dialog, which) -> {
-                ExchangeManager.acceptImport(context, first);
-                refreshSummaries();
+                final Context appContext = context.getApplicationContext();
+                AppExecutors.getDiskIO().execute(() -> {
+                    ExchangeManager.acceptImport(appContext, first);
+                    AppExecutors.getMainThread().post(this::refreshSummaries);
+                });
             })
             .setNegativeButton(R.string.mighty_reject, (dialog, which) -> {
                 ExchangeManager.rejectImport(context, first);
                 refreshSummaries();
             })
             .show();
+    }
+
+    private static String formatInboxAlarmSummary(String alarmJson) {
+        try {
+            final JSONObject alarm = new JSONObject(alarmJson);
+            final int hour = alarm.optInt("hour", 0);
+            final int minutes = alarm.optInt("minutes", 0);
+            final String label = alarm.optString("label", "");
+            final String time = String.format(Locale.getDefault(), "%02d:%02d", hour, minutes);
+            if (label.isEmpty()) {
+                return time;
+            }
+            return time + " — " + label;
+        } catch (JSONException e) {
+            return alarmJson;
+        }
     }
 
     private void showManageTagsDialog() {
@@ -545,6 +771,7 @@ public class MightyFeaturesFragment extends ScreenFragment
         mBackupScheduleEnabledPref = null;
         mBackupIntervalPref = null;
         mBackupNowPref = null;
+        mExchangeDeviceNamePref = null;
         mExchangeAddFolderPref = null;
         mExchangeFoldersPref = null;
         mExchangeScanNowPref = null;

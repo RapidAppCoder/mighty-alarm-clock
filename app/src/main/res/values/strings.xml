@@ -1527,18 +1527,32 @@
     <string name="mighty_backup_now_failure">Backup failed; check that a folder is selected</string>
 
     <string name="mighty_category_exchange">Exchange</string>
+    <string name="mighty_exchange_device_name_title">Device name</string>
+    <string name="mighty_exchange_device_name_hint">Name shown to other devices</string>
+    <string name="mighty_exchange_device_name_dialog_title">Edit device name</string>
     <string name="mighty_exchange_add_folder_title">Add exchange folder</string>
     <string name="mighty_exchange_folder_name_hint">Folder name</string>
     <string name="mighty_exchange_folders_title">Configured folders</string>
     <!-- Summary showing the number of configured exchange folders. %1$d = count -->
     <string name="mighty_exchange_folders_summary">%1$d folder(s)</string>
+    <string name="mighty_exchange_folders_empty">No exchange folders configured</string>
+    <!-- List row: %1$s = folder name, %2$s = import policy label -->
+    <string name="mighty_exchange_folder_list_item">%1$s\n%2$s</string>
+    <string name="mighty_exchange_import_policy_ask">Ask before importing</string>
+    <string name="mighty_exchange_import_policy_auto">Import automatically</string>
+    <string name="mighty_exchange_folder_actions_title">Exchange folder</string>
+    <string name="mighty_exchange_folder_change_policy">Import behavior</string>
+    <string name="mighty_exchange_folder_deleted">Exchange folder removed</string>
     <string name="mighty_exchange_scan_now_title">Scan now</string>
     <string name="mighty_exchange_inbox_title">Inbox</string>
     <!-- Summary showing the number of pending exchange imports. %1$d = count -->
     <string name="mighty_exchange_inbox_summary">%1$d pending</string>
     <string name="mighty_exchange_inbox_empty">Inbox is empty</string>
-    <!-- Message of the exchange inbox review dialog. %1$s = folder name, %2$s = raw alarm JSON -->
-    <string name="mighty_exchange_inbox_item_message">From folder \"%1$s\":\n\n%2$s</string>
+    <!-- Inbox item: %1$s = folder, %2$s = sender, %3$s = alarm summary -->
+    <string name="mighty_exchange_inbox_item_message">Folder \"%1$s\"\nFrom: %2$s\n\n%3$s</string>
+    <!-- Inbox item with explicit recipient: %1$s = folder, %2$s = sender, %3$s = recipient, %4$s = alarm summary -->
+    <string name="mighty_exchange_inbox_item_message_to">Folder \"%1$s\"\nFrom: %2$s\nTo: %3$s\n\n%4$s</string>
+    <string name="mighty_exchange_unknown_sender">Unknown device</string>
     <string name="mighty_accept">Accept</string>
     <string name="mighty_reject">Reject</string>
 
@@ -1594,6 +1608,8 @@
     <!-- Alarm edit bottom sheet: move to exchange section -->
     <string name="mighty_move_to_exchange_button">Move to exchange…</string>
     <string name="mighty_move_to_exchange_title">Choose exchange folder</string>
+    <string name="mighty_move_to_exchange_recipient_title">Choose recipient</string>
+    <string name="mighty_move_to_exchange_any_device">Any device</string>
     <string name="mighty_move_to_exchange_success">Alarm moved to exchange folder</string>
     <string name="mighty_move_to_exchange_failure">Failed to move alarm to exchange folder</string>
     <string name="mighty_exchange_no_folders_configured">No exchange folders configured. Add one from Mighty features settings.</string>

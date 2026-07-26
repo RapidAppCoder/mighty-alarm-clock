@@ -721,15 +721,27 @@
     <string name="mighty_backup_now_failure">Backup fehlgeschlagen; prüfen Sie, ob ein Ordner gewählt ist</string>
 
     <string name="mighty_category_exchange">Austausch</string>
+    <string name="mighty_exchange_device_name_title">Gerätename</string>
+    <string name="mighty_exchange_device_name_hint">Name, der anderen Geräten angezeigt wird</string>
+    <string name="mighty_exchange_device_name_dialog_title">Gerätenamen bearbeiten</string>
     <string name="mighty_exchange_add_folder_title">Austauschordner hinzufügen</string>
     <string name="mighty_exchange_folder_name_hint">Ordnername</string>
     <string name="mighty_exchange_folders_title">Konfigurierte Ordner</string>
     <string name="mighty_exchange_folders_summary">%1$d Ordner</string>
+    <string name="mighty_exchange_folders_empty">Keine Austauschordner konfiguriert</string>
+    <string name="mighty_exchange_folder_list_item">%1$s\n%2$s</string>
+    <string name="mighty_exchange_import_policy_ask">Vor dem Import nachfragen</string>
+    <string name="mighty_exchange_import_policy_auto">Automatisch importieren</string>
+    <string name="mighty_exchange_folder_actions_title">Austauschordner</string>
+    <string name="mighty_exchange_folder_change_policy">Import-Verhalten</string>
+    <string name="mighty_exchange_folder_deleted">Austauschordner entfernt</string>
     <string name="mighty_exchange_scan_now_title">Jetzt scannen</string>
     <string name="mighty_exchange_inbox_title">Posteingang</string>
     <string name="mighty_exchange_inbox_summary">%1$d ausstehend</string>
     <string name="mighty_exchange_inbox_empty">Posteingang ist leer</string>
-    <string name="mighty_exchange_inbox_item_message">Aus Ordner „%1$s“:\n\n%2$s</string>
+    <string name="mighty_exchange_inbox_item_message">Ordner „%1$s“\nVon: %2$s\n\n%3$s</string>
+    <string name="mighty_exchange_inbox_item_message_to">Ordner „%1$s“\nVon: %2$s\nAn: %3$s\n\n%4$s</string>
+    <string name="mighty_exchange_unknown_sender">Unbekanntes Gerät</string>
     <string name="mighty_accept">Annehmen</string>
     <string name="mighty_reject">Ablehnen</string>
 
@@ -780,6 +792,8 @@
 
     <string name="mighty_move_to_exchange_button">In Austausch verschieben…</string>
     <string name="mighty_move_to_exchange_title">Austauschordner wählen</string>
+    <string name="mighty_move_to_exchange_recipient_title">Empfänger wählen</string>
+    <string name="mighty_move_to_exchange_any_device">Beliebiges Gerät</string>
     <string name="mighty_move_to_exchange_success">Wecker in Austauschordner verschoben</string>
     <string name="mighty_move_to_exchange_failure">Verschieben in Austauschordner fehlgeschlagen</string>
     <string name="mighty_exchange_no_folders_configured">Keine Austauschordner konfiguriert. Fügen Sie einen unter Mighty-Funktionen hinzu.</string>

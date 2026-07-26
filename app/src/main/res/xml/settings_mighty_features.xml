@@ -108,6 +108,13 @@
         app:iconSpaceReserved="false">
 
         <Preference
+            android:key="key_mighty_exchange_device_name"
+            android:layout="@layout/settings_preference_layout"
+            android:title="@string/mighty_exchange_device_name_title"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+        <Preference
             android:key="key_mighty_exchange_add_folder"
             android:layout="@layout/settings_preference_layout"
             android:title="@string/mighty_exchange_add_folder_title"

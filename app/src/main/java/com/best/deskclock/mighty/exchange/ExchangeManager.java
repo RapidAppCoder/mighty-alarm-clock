@@ -2,19 +2,33 @@
 
 package com.best.deskclock.mighty.exchange;
 
+import static com.best.deskclock.settings.PreferencesDefaultValues.DEFAULT_ALARM_SNOOZE_DURATION;
+import static com.best.deskclock.settings.PreferencesDefaultValues.DEFAULT_ALARM_VOLUME;
+import static com.best.deskclock.settings.PreferencesDefaultValues.DEFAULT_AUTO_SILENCE_DURATION;
+import static com.best.deskclock.settings.PreferencesDefaultValues.DEFAULT_ENABLE_DELETE_OCCASIONAL_ALARM_BY_DEFAULT;
+import static com.best.deskclock.settings.PreferencesDefaultValues.DEFAULT_MISSED_ALARM_REPEAT_LIMIT;
+import static com.best.deskclock.settings.PreferencesDefaultValues.DEFAULT_VIBRATION_PATTERN;
+import static com.best.deskclock.settings.PreferencesDefaultValues.DEFAULT_VOLUME_CRESCENDO_DURATION;
+
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
+import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.documentfile.provider.DocumentFile;
 
 import com.best.deskclock.alarms.AlarmStateManager;
+import com.best.deskclock.data.Weekdays;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.EventLogStore;
 import com.best.deskclock.utils.LogUtils;
+import com.best.deskclock.utils.SdkUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -32,15 +46,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Manages "exchange" folders: shared folders (typically on a cloud-synced storage provider) that
- * other devices/installs also watch, used to move or share alarms between devices.
+ * Manages "exchange" folders: shared folders (typically Syncthing-synced) that other devices also
+ * watch, used to move alarms between installs.
  * <p>
- * A device can "move" an alarm to a folder by writing a handoff JSON file describing the alarm.
- * Other devices that watch the same folder (via {@link ExchangeScanWorker}) will detect the new
- * handoff file and either automatically import it (policy {@link ImportPolicy#AUTO}) or place it
- * in an inbox for the user to accept/reject (policy {@link ImportPolicy#ASK}).
+ * Each watching install writes a {@code Device-<name>.json} presence file and periodically updates
+ * its {@code lastSeenAt}. Moving an alarm writes an {@code AlarmTransfer-<uuid>.json} in the folder
+ * root (with sender and optional recipient). {@link ExchangeScanWorker} discovers new transfers and
+ * either auto-imports them or places them in an inbox.
  */
 public final class ExchangeManager {
 
@@ -50,16 +65,150 @@ public final class ExchangeManager {
     private static final String KEY_FOLDERS = "exchange_folders";
     private static final String KEY_INBOX = "exchange_inbox";
     private static final String KEY_PROCESSED_PREFIX = "exchange_processed_";
+    private static final String KEY_DEVICE_ID = "exchange_device_id";
+    private static final String KEY_DEVICE_NAME = "exchange_device_name";
+    private static final String KEY_LAST_PRESENCE_FILE_PREFIX = "exchange_presence_file_";
 
-    private static final String HANDOFFS_DIR = "handoffs";
-    private static final String EXCHANGE_FILE = "alarms-exchange.json";
+    private static final String DEVICE_FILE_PREFIX = "Device-";
+    private static final String TRANSFER_FILE_PREFIX = "AlarmTransfer-";
+    private static final String JSON_SUFFIX = ".json";
     private static final String MIME_JSON = "application/json";
+
+    private static final long DEVICE_STALE_MS = TimeUnit.DAYS.toMillis(7);
 
     private ExchangeManager() {
     }
 
     private static SharedPreferences prefs(Context context) {
         return context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    // ---------------------------------------------------------------------
+    // Local device identity
+    // ---------------------------------------------------------------------
+
+    public static final class Device {
+        public final String deviceId;
+        public final String deviceName;
+        public final long lastSeenAt;
+
+        public Device(String deviceId, String deviceName, long lastSeenAt) {
+            this.deviceId = deviceId;
+            this.deviceName = deviceName;
+            this.lastSeenAt = lastSeenAt;
+        }
+
+        JSONObject toJson() throws JSONException {
+            final JSONObject o = new JSONObject();
+            o.put("deviceId", deviceId);
+            o.put("deviceName", deviceName);
+            o.put("lastSeenAt", lastSeenAt);
+            return o;
+        }
+
+        static Device fromJson(JSONObject o) {
+            if (o == null) {
+                return null;
+            }
+            final String id = o.optString("deviceId", "");
+            final String name = o.optString("deviceName", "");
+            if (TextUtils.isEmpty(id) && TextUtils.isEmpty(name)) {
+                return null;
+            }
+            return new Device(id, name, o.optLong("lastSeenAt", 0L));
+        }
+    }
+
+    @NonNull
+    public static String getDeviceId(Context context) {
+        final SharedPreferences p = prefs(context);
+        String id = p.getString(KEY_DEVICE_ID, null);
+        if (TextUtils.isEmpty(id)) {
+            id = UUID.randomUUID().toString();
+            p.edit().putString(KEY_DEVICE_ID, id).apply();
+        }
+        return id;
+    }
+
+    @NonNull
+    public static String getDeviceName(Context context) {
+        final SharedPreferences p = prefs(context);
+        String name = p.getString(KEY_DEVICE_NAME, null);
+        if (TextUtils.isEmpty(name)) {
+            name = resolveDefaultDeviceName(context);
+            p.edit().putString(KEY_DEVICE_NAME, name).apply();
+        }
+        return name;
+    }
+
+    public static void setDeviceName(Context context, String name) {
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isEmpty()) {
+            trimmed = resolveDefaultDeviceName(context);
+        }
+        prefs(context).edit().putString(KEY_DEVICE_NAME, trimmed).apply();
+        refreshPresence(context);
+    }
+
+    @NonNull
+    private static String resolveDefaultDeviceName(Context context) {
+        if (SdkUtils.isAtLeastAndroid71()) {
+            try {
+                final String global = Settings.Global.getString(context.getContentResolver(),
+                    Settings.Global.DEVICE_NAME);
+                if (!TextUtils.isEmpty(global)) {
+                    return global.trim();
+                }
+            } catch (Exception ignored) {
+                // Fall through.
+            }
+        }
+        try {
+            final String bluetooth = Settings.Secure.getString(context.getContentResolver(), "bluetooth_name");
+            if (!TextUtils.isEmpty(bluetooth)) {
+                return bluetooth.trim();
+            }
+        } catch (Exception ignored) {
+            // Fall through.
+        }
+        final String model = Build.MODEL;
+        return TextUtils.isEmpty(model) ? "Device" : model;
+    }
+
+    @NonNull
+    public static String sanitizeFileNamePart(String name) {
+        if (TextUtils.isEmpty(name)) {
+            return "Device";
+        }
+        final String sanitized = name.trim()
+            .replaceAll("[\\\\/:*?\"<>|\\x00-\\x1F]", "_")
+            .replaceAll("\\s+", " ")
+            .trim();
+        if (sanitized.isEmpty() || sanitized.equals(".") || sanitized.equals("..")) {
+            return "Device";
+        }
+        // Keep filenames reasonably short for SAF providers.
+        return sanitized.length() > 80 ? sanitized.substring(0, 80).trim() : sanitized;
+    }
+
+    @NonNull
+    private static String deviceFileNameFor(String deviceName) {
+        return DEVICE_FILE_PREFIX + sanitizeFileNamePart(deviceName) + JSON_SUFFIX;
+    }
+
+    @NonNull
+    private static Device localDevice(Context context) {
+        return new Device(getDeviceId(context), getDeviceName(context), System.currentTimeMillis());
+    }
+
+    private static boolean isSameDevice(@Nullable Device a, @NonNull Device b) {
+        if (a == null) {
+            return false;
+        }
+        if (!TextUtils.isEmpty(a.deviceId) && a.deviceId.equals(b.deviceId)) {
+            return true;
+        }
+        return !TextUtils.isEmpty(a.deviceName) && a.deviceName.equals(b.deviceName);
     }
 
     // ---------------------------------------------------------------------
@@ -116,14 +265,110 @@ public final class ExchangeManager {
         final List<ExchangeFolder> folders = getFolders(context);
         folders.add(new ExchangeFolder(name, treeUri.toString(), policy));
         saveFolders(context, folders);
+        refreshPresence(context);
     }
 
     public static void removeFolder(Context context, int index) {
         final List<ExchangeFolder> folders = getFolders(context);
         if (index >= 0 && index < folders.size()) {
-            folders.remove(index);
+            final ExchangeFolder removed = folders.remove(index);
             saveFolders(context, folders);
+            prefs(context).edit()
+                .remove(KEY_LAST_PRESENCE_FILE_PREFIX + removed.name)
+                .remove(KEY_PROCESSED_PREFIX + removed.name)
+                .apply();
+            if (folders.isEmpty()) {
+                ExchangeScanWorker.cancel(context);
+            }
         }
+    }
+
+    /**
+     * Updates the import policy for the folder at {@code index}.
+     */
+    public static void setFolderImportPolicy(Context context, int index, ImportPolicy policy) {
+        final List<ExchangeFolder> folders = getFolders(context);
+        if (index < 0 || index >= folders.size() || policy == null) {
+            return;
+        }
+        final ExchangeFolder existing = folders.get(index);
+        folders.set(index, new ExchangeFolder(existing.name, existing.treeUri, policy));
+        saveFolders(context, folders);
+    }
+
+    // ---------------------------------------------------------------------
+    // Presence (Device-*.json)
+    // ---------------------------------------------------------------------
+
+    /**
+     * Writes or refreshes this install's {@code Device-<name>.json} in every configured folder.
+     */
+    public static void refreshPresence(Context context) {
+        final Device local = localDevice(context);
+        for (ExchangeFolder folder : getFolders(context)) {
+            refreshPresenceInFolder(context, folder, local);
+        }
+    }
+
+    private static void refreshPresenceInFolder(Context context, ExchangeFolder folder, Device local) {
+        try {
+            final DocumentFile root = DocumentFile.fromTreeUri(context, Uri.parse(folder.treeUri));
+            if (root == null || !root.canWrite()) {
+                LogUtils.e("ExchangeManager: cannot write presence to folder " + folder.name);
+                return;
+            }
+
+            final String fileName = deviceFileNameFor(local.deviceName);
+            final String lastFileName = prefs(context).getString(KEY_LAST_PRESENCE_FILE_PREFIX + folder.name, null);
+            if (lastFileName != null && !lastFileName.equals(fileName)) {
+                final DocumentFile old = root.findFile(lastFileName);
+                if (old != null && old.isFile()) {
+                    //noinspection ResultOfMethodCallIgnored
+                    old.delete();
+                }
+            }
+
+            writeOrReplaceJson(context, root, fileName, local.toJson());
+            prefs(context).edit().putString(KEY_LAST_PRESENCE_FILE_PREFIX + folder.name, fileName).apply();
+        } catch (Exception e) {
+            LogUtils.e("ExchangeManager: failed to refresh presence in " + folder.name, e);
+        }
+    }
+
+    /**
+     * Lists other devices that recently wrote a presence file into the given folder.
+     */
+    @NonNull
+    public static List<Device> listDevices(Context context, ExchangeFolder folder) {
+        final List<Device> result = new ArrayList<>();
+        try {
+            final DocumentFile root = DocumentFile.fromTreeUri(context, Uri.parse(folder.treeUri));
+            if (root == null) {
+                return result;
+            }
+
+            final Device local = localDevice(context);
+            final long now = System.currentTimeMillis();
+
+            for (DocumentFile file : root.listFiles()) {
+                final String name = file.getName();
+                if (name == null || !name.startsWith(DEVICE_FILE_PREFIX) || !name.endsWith(JSON_SUFFIX)) {
+                    continue;
+                }
+                final JSONObject json = readJson(context, file);
+                final Device device = Device.fromJson(json);
+                if (device == null || isSameDevice(device, local)) {
+                    continue;
+                }
+                if (device.lastSeenAt > 0 && now - device.lastSeenAt > DEVICE_STALE_MS) {
+                    continue;
+                }
+                result.add(device);
+            }
+        } catch (Exception e) {
+            LogUtils.e("ExchangeManager: failed to list devices in " + folder.name, e);
+        }
+        return result;
     }
 
     // ---------------------------------------------------------------------
@@ -131,12 +376,14 @@ public final class ExchangeManager {
     // ---------------------------------------------------------------------
 
     /**
-     * Writes a "move" handoff JSON file for the given alarm into the given folder, then disables
-     * the local alarm (it is now considered owned by whoever claims the handoff).
+     * Writes an {@code AlarmTransfer-*.json} for the given alarm into the folder root, then disables
+     * the local alarm.
      *
-     * @return {@code true} on success.
+     * @param target optional recipient; {@code null} means any watching device may claim it
+     * @return {@code true} on success
      */
-    public static boolean moveAlarmTo(Context context, Alarm alarm, ExchangeFolder folder) {
+    public static boolean moveAlarmTo(Context context, Alarm alarm, ExchangeFolder folder,
+                                      @Nullable Device target) {
         try {
             final DocumentFile root = DocumentFile.fromTreeUri(context, Uri.parse(folder.treeUri));
             if (root == null || !root.canWrite()) {
@@ -144,28 +391,34 @@ public final class ExchangeManager {
                 return false;
             }
 
-            final DocumentFile handoffsDir = getOrCreateSubDir(root, HANDOFFS_DIR);
-            if (handoffsDir == null) {
-                LogUtils.e("ExchangeManager: could not create handoffs directory");
-                return false;
+            refreshPresenceInFolder(context, folder, localDevice(context));
+
+            final String transferId = UUID.randomUUID().toString();
+            final Device from = localDevice(context);
+
+            final JSONObject transfer = new JSONObject();
+            transfer.put("transferMode", "move");
+            transfer.put("claimPolicy", "receiver_takes_ownership");
+            transfer.put("transferId", transferId);
+            transfer.put("createdAt", System.currentTimeMillis());
+            transfer.put("from", from.toJson());
+            if (target != null) {
+                transfer.put("to", new Device(target.deviceId, target.deviceName, 0L).toJson());
             }
+            transfer.put("alarm", alarmToJson(alarm));
 
-            final JSONObject handoff = new JSONObject();
-            handoff.put("transferMode", "move");
-            handoff.put("claimPolicy", "receiver_takes_ownership");
-            handoff.put("handoffId", UUID.randomUUID().toString());
-            handoff.put("createdAt", System.currentTimeMillis());
-            handoff.put("alarm", alarmToJson(alarm));
-
-            final String fileName = "handoff-" + handoff.getString("handoffId") + ".json";
-            writeJson(context, handoffsDir, fileName, handoff);
+            final String fileName = TRANSFER_FILE_PREFIX + transferId + JSON_SUFFIX;
+            writeOrReplaceJson(context, root, fileName, transfer);
 
             alarm.enabled = false;
             alarm.updateAlarm(context.getContentResolver());
             AlarmStateManager.deleteAllInstances(context, alarm.id);
 
-            EventLogStore.logEvent(context.getContentResolver(), "ALARM_MOVED_TO_EXCHANGE", alarm.stableUuid, alarm.label,
-                "folder=" + folder.name);
+            final String detail = target == null
+                ? "folder=" + folder.name
+                : "folder=" + folder.name + ",to=" + target.deviceName;
+            EventLogStore.logEvent(context.getContentResolver(), "ALARM_MOVED_TO_EXCHANGE", alarm.stableUuid,
+                alarm.label, detail);
 
             return true;
         } catch (Exception e) {
@@ -188,14 +441,15 @@ public final class ExchangeManager {
     }
 
     // ---------------------------------------------------------------------
-    // Scanning folders for incoming handoffs
+    // Scanning folders for incoming transfers
     // ---------------------------------------------------------------------
 
     /**
-     * Scans every configured folder for new handoff files and either imports them automatically
-     * or adds them to the inbox, depending on each folder's {@link ImportPolicy}.
+     * Refreshes presence, then scans every configured folder for new {@code AlarmTransfer-*.json}
+     * files.
      */
     public static void scanAll(Context context) {
+        refreshPresence(context);
         for (ExchangeFolder folder : getFolders(context)) {
             scanFolder(context, folder);
         }
@@ -208,31 +462,33 @@ public final class ExchangeManager {
                 return;
             }
 
+            final Device local = localDevice(context);
             final Set<String> processed = getProcessedFileNames(context, folder);
-            final List<DocumentFile> candidates = new ArrayList<>();
 
-            final DocumentFile handoffsDir = root.findFile(HANDOFFS_DIR);
-            if (handoffsDir != null && handoffsDir.isDirectory()) {
-                for (DocumentFile f : handoffsDir.listFiles()) {
-                    if (f.getName() != null && f.getName().endsWith(".json")) {
-                        candidates.add(f);
-                    }
-                }
-            }
-
-            final DocumentFile exchangeFile = root.findFile(EXCHANGE_FILE);
-            if (exchangeFile != null) {
-                candidates.add(exchangeFile);
-            }
-
-            for (DocumentFile file : candidates) {
+            for (DocumentFile file : root.listFiles()) {
                 final String name = file.getName();
-                if (name == null || processed.contains(name)) {
+                if (name == null || !name.startsWith(TRANSFER_FILE_PREFIX) || !name.endsWith(JSON_SUFFIX)) {
+                    continue;
+                }
+                if (processed.contains(name)) {
                     continue;
                 }
 
                 final JSONObject json = readJson(context, file);
                 if (json == null) {
+                    continue;
+                }
+
+                final Device from = Device.fromJson(json.optJSONObject("from"));
+                if (isSameDevice(from, local)) {
+                    // Own outbound transfer — mark processed so we don't keep re-reading it.
+                    processed.add(name);
+                    continue;
+                }
+
+                final Device to = Device.fromJson(json.optJSONObject("to"));
+                if (to != null && !isSameDevice(to, local)) {
+                    // Addressed to someone else — leave unprocessed so a rename can still claim it.
                     continue;
                 }
 
@@ -246,17 +502,22 @@ public final class ExchangeManager {
         }
     }
 
-    private static void handleIncoming(Context context, ExchangeFolder folder, String fileName, JSONObject handoff) {
-        final JSONObject alarmJson = handoff.optJSONObject("alarm");
+    private static void handleIncoming(Context context, ExchangeFolder folder, String fileName,
+                                       JSONObject transfer) {
+        final JSONObject alarmJson = transfer.optJSONObject("alarm");
         if (alarmJson == null) {
             return;
         }
 
+        final Device from = Device.fromJson(transfer.optJSONObject("from"));
+        final Device to = Device.fromJson(transfer.optJSONObject("to"));
+
         if (folder.importPolicy == ImportPolicy.AUTO) {
             createAlarmFromJson(context, alarmJson);
+            deleteTransferFile(context, folder, fileName);
             LogUtils.i("ExchangeManager: auto-imported alarm from %s/%s", folder.name, fileName);
         } else {
-            addToInbox(context, folder, fileName, alarmJson);
+            addToInbox(context, folder, fileName, alarmJson, from, to);
             LogUtils.i("ExchangeManager: queued alarm from %s/%s for user review", folder.name, fileName);
         }
     }
@@ -271,17 +532,25 @@ public final class ExchangeManager {
         public final String sourceFileName;
         public final String alarmJson;
         public final long receivedAt;
+        @Nullable
+        public final String fromDeviceName;
+        @Nullable
+        public final String toDeviceName;
 
-        PendingImport(String id, String folderName, String sourceFileName, String alarmJson, long receivedAt) {
+        PendingImport(String id, String folderName, String sourceFileName, String alarmJson,
+                      long receivedAt, @Nullable String fromDeviceName, @Nullable String toDeviceName) {
             this.id = id;
             this.folderName = folderName;
             this.sourceFileName = sourceFileName;
             this.alarmJson = alarmJson;
             this.receivedAt = receivedAt;
+            this.fromDeviceName = fromDeviceName;
+            this.toDeviceName = toDeviceName;
         }
     }
 
-    private static void addToInbox(Context context, ExchangeFolder folder, String fileName, JSONObject alarmJson) {
+    private static void addToInbox(Context context, ExchangeFolder folder, String fileName,
+                                   JSONObject alarmJson, @Nullable Device from, @Nullable Device to) {
         try {
             final JSONArray inbox = new JSONArray(prefs(context).getString(KEY_INBOX, "[]"));
             final JSONObject entry = new JSONObject();
@@ -290,6 +559,12 @@ public final class ExchangeManager {
             entry.put("sourceFileName", fileName);
             entry.put("alarm", alarmJson);
             entry.put("receivedAt", System.currentTimeMillis());
+            if (from != null) {
+                entry.put("fromDeviceName", from.deviceName);
+            }
+            if (to != null) {
+                entry.put("toDeviceName", to.deviceName);
+            }
             inbox.put(entry);
             prefs(context).edit().putString(KEY_INBOX, inbox.toString()).apply();
         } catch (JSONException e) {
@@ -308,7 +583,9 @@ public final class ExchangeManager {
                     entry.optString("folderName"),
                     entry.optString("sourceFileName"),
                     entry.optJSONObject("alarm") != null ? entry.optJSONObject("alarm").toString() : "{}",
-                    entry.optLong("receivedAt")));
+                    entry.optLong("receivedAt"),
+                    entry.has("fromDeviceName") ? entry.optString("fromDeviceName") : null,
+                    entry.has("toDeviceName") ? entry.optString("toDeviceName") : null));
             }
         } catch (JSONException e) {
             LogUtils.e("ExchangeManager: failed to read inbox", e);
@@ -333,7 +610,8 @@ public final class ExchangeManager {
     }
 
     /**
-     * Accepts a pending import: creates the local alarm and removes the entry from the inbox.
+     * Accepts a pending import: creates the local alarm, deletes the transfer file, and removes the
+     * inbox entry.
      */
     public static void acceptImport(Context context, PendingImport pending) {
         try {
@@ -341,25 +619,95 @@ public final class ExchangeManager {
         } catch (JSONException e) {
             LogUtils.e("ExchangeManager: failed to accept import " + pending.id, e);
         }
+
+        ExchangeFolder folder = findFolderByName(context, pending.folderName);
+        if (folder != null) {
+            deleteTransferFile(context, folder, pending.sourceFileName);
+            final Set<String> processed = getProcessedFileNames(context, folder);
+            processed.add(pending.sourceFileName);
+            saveProcessedFileNames(context, folder, processed);
+        }
+
         removeFromInbox(context, pending.id);
     }
 
     /**
-     * Rejects a pending import: simply removes the entry from the inbox without creating an alarm.
+     * Rejects a pending import: removes the inbox entry without creating an alarm or deleting the
+     * transfer file (so another device may still claim an unaddressed transfer).
      */
     public static void rejectImport(Context context, PendingImport pending) {
         removeFromInbox(context, pending.id);
     }
 
+    @Nullable
+    private static ExchangeFolder findFolderByName(Context context, String name) {
+        for (ExchangeFolder folder : getFolders(context)) {
+            if (folder.name.equals(name)) {
+                return folder;
+            }
+        }
+        return null;
+    }
+
+    private static void deleteTransferFile(Context context, ExchangeFolder folder, String fileName) {
+        try {
+            final DocumentFile root = DocumentFile.fromTreeUri(context, Uri.parse(folder.treeUri));
+            if (root == null) {
+                return;
+            }
+            final DocumentFile file = root.findFile(fileName);
+            if (file != null && file.isFile()) {
+                if (!file.delete()) {
+                    LogUtils.w("ExchangeManager: failed to delete transfer file " + fileName);
+                }
+            }
+        } catch (Exception e) {
+            LogUtils.e("ExchangeManager: failed to delete transfer file " + fileName, e);
+        }
+    }
+
     private static void createAlarmFromJson(Context context, JSONObject alarmJson) {
         try {
-            final Alarm alarm = new Alarm();
-            alarm.hour = alarmJson.optInt("hour", alarm.hour);
-            alarm.minutes = alarmJson.optInt("minutes", alarm.minutes);
-            alarm.label = alarmJson.optString("label", "");
-            alarm.vibrate = alarmJson.optBoolean("vibrate", alarm.vibrate);
-            alarm.snoozeDuration = alarmJson.optInt("snoozeDuration", alarm.snoozeDuration);
-            alarm.enabled = true;
+            // Avoid Alarm()'s default constructor: it reads ringtone settings via DataModel, which
+            // may only be called on the main thread. Import/scan often run on a background executor.
+            final Calendar now = Calendar.getInstance();
+            final int hour = alarmJson.optInt("hour", 0);
+            final int minutes = alarmJson.optInt("minutes", 0);
+            final String label = alarmJson.optString("label", "");
+            final boolean vibrate = alarmJson.optBoolean("vibrate", true);
+            final int snoozeDuration = alarmJson.optInt("snoozeDuration", DEFAULT_ALARM_SNOOZE_DURATION);
+            final Weekdays daysOfWeek = Weekdays.fromBits(alarmJson.optInt("daysOfWeekBits", 0));
+
+            String alert = alarmJson.isNull("ringtone") ? null : alarmJson.optString("ringtone", null);
+            if (TextUtils.isEmpty(alert)) {
+                final Uri defaultUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+                alert = defaultUri != null ? defaultUri.toString() : Uri.EMPTY.toString();
+            }
+
+            final Alarm alarm = new Alarm(
+                Alarm.INVALID_ID,
+                true,
+                now.get(Calendar.YEAR),
+                now.get(Calendar.MONTH),
+                now.get(Calendar.DAY_OF_MONTH),
+                hour,
+                minutes,
+                vibrate,
+                DEFAULT_VIBRATION_PATTERN,
+                true,
+                daysOfWeek,
+                label,
+                false,
+                alert,
+                DEFAULT_ENABLE_DELETE_OCCASIONAL_ALARM_BY_DEFAULT,
+                DEFAULT_AUTO_SILENCE_DURATION,
+                snoozeDuration,
+                Integer.parseInt(DEFAULT_MISSED_ALARM_REPEAT_LIMIT),
+                DEFAULT_VOLUME_CRESCENDO_DURATION,
+                DEFAULT_ALARM_VOLUME,
+                0,
+                0L,
+                0L);
 
             final ContentResolver cr = context.getContentResolver();
             final Alarm saved = alarm.addAlarm(cr);
@@ -398,17 +746,13 @@ public final class ExchangeManager {
         prefs(context).edit().putString(KEY_PROCESSED_PREFIX + folder.name, array.toString()).apply();
     }
 
-    @Nullable
-    private static DocumentFile getOrCreateSubDir(@NonNull DocumentFile parent, String name) {
-        final DocumentFile existing = parent.findFile(name);
-        if (existing != null && existing.isDirectory()) {
-            return existing;
-        }
-        return parent.createDirectory(name);
-    }
-
-    private static void writeJson(Context context, DocumentFile dir, String fileName, JSONObject json)
+    private static void writeOrReplaceJson(Context context, DocumentFile dir, String fileName, JSONObject json)
         throws IOException, JSONException {
+        final DocumentFile existing = dir.findFile(fileName);
+        if (existing != null && existing.isFile()) {
+            //noinspection ResultOfMethodCallIgnored
+            existing.delete();
+        }
         final DocumentFile file = dir.createFile(MIME_JSON, fileName);
         if (file == null) {
             throw new IOException("Could not create file: " + fileName);
