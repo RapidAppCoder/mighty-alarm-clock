@@ -9,11 +9,18 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.text.format.DateFormat;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -33,11 +40,13 @@ import com.best.deskclock.mighty.exchange.ExchangeManager;
 import com.best.deskclock.mighty.exchange.ExchangeScanWorker;
 import com.best.deskclock.mighty.mute.GlobalMuteController;
 import com.best.deskclock.mighty.stats.DeviceStats;
+import com.best.deskclock.mighty.tags.TagColorUtils;
 import com.best.deskclock.mighty.wifi.WifiAlarmRuleManager;
 import com.best.deskclock.provider.EventLogStore;
 import com.best.deskclock.provider.Tag;
 import com.best.deskclock.uicomponents.toast.CustomToast;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.rarepebble.colorpicker.ColorPickerView;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -707,36 +716,104 @@ public class MightyFeaturesFragment extends ScreenFragment
 
     private void showManageTagsDialog() {
         final Context context = requireContext();
+        TagColorUtils.ensureColorsAssigned(context.getContentResolver());
         final List<Tag> tags = Tag.getTags(context.getContentResolver());
-        final CharSequence[] items;
+
+        final MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.mighty_manage_tags_title)
+            .setPositiveButton(R.string.mighty_tags_add, (dialog, which) -> showCreateTagDialog())
+            .setNegativeButton(android.R.string.cancel, null);
+
         if (tags.isEmpty()) {
-            items = new CharSequence[]{getString(R.string.mighty_tags_empty)};
-        } else {
-            items = new CharSequence[tags.size()];
-            for (int i = 0; i < tags.size(); i++) {
-                items[i] = tags.get(i).name;
-            }
+            builder.setMessage(R.string.mighty_tags_empty);
+            builder.show();
+            return;
         }
 
-        new MaterialAlertDialogBuilder(context)
-            .setTitle(R.string.mighty_manage_tags_title)
-            .setItems(items, (dialog, which) -> {
-                if (tags.isEmpty()) {
-                    return;
+        final ArrayAdapter<Tag> adapter = new ArrayAdapter<>(context, android.R.layout.simple_list_item_1, tags) {
+            @NonNull
+            @Override
+            public View getView(int position, View convertView, @NonNull ViewGroup parent) {
+                final LinearLayout row;
+                final TextView label;
+                final View swatch;
+                if (convertView instanceof LinearLayout) {
+                    row = (LinearLayout) convertView;
+                    swatch = row.getChildAt(0);
+                    label = (TextView) row.getChildAt(1);
+                } else {
+                    row = new LinearLayout(context);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setGravity(Gravity.CENTER_VERTICAL);
+                    final int pad = (int) (16 * context.getResources().getDisplayMetrics().density);
+                    row.setPadding(pad, pad / 2, pad, pad / 2);
+
+                    swatch = new View(context);
+                    final int size = (int) (20 * context.getResources().getDisplayMetrics().density);
+                    final LinearLayout.LayoutParams swatchLp = new LinearLayout.LayoutParams(size, size);
+                    swatchLp.setMarginEnd(pad);
+                    row.addView(swatch, swatchLp);
+
+                    label = new TextView(context);
+                    label.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyLarge);
+                    row.addView(label, new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 }
-                final Tag selected = tags.get(which);
-                new MaterialAlertDialogBuilder(context)
-                    .setTitle(selected.name)
-                    .setMessage(R.string.mighty_manage_tags_summary)
-                    .setPositiveButton(R.string.mighty_tags_delete, (d, w) -> {
-                        Tag.deleteTag(context.getContentResolver(), selected.id);
-                        CustomToast.show(context, R.string.mighty_tags_deleted);
-                    })
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show();
+
+                final Tag tag = getItem(position);
+                if (tag != null) {
+                    label.setText(tag.name);
+                    final GradientDrawable circle = new GradientDrawable();
+                    circle.setShape(GradientDrawable.OVAL);
+                    circle.setColor(TagColorUtils.displayColor(tag));
+                    swatch.setBackground(circle);
+                }
+                return row;
+            }
+        };
+
+        builder.setAdapter(adapter, (dialog, which) -> showTagActionsDialog(tags.get(which)))
+            .show();
+    }
+
+    private void showTagActionsDialog(Tag tag) {
+        final Context context = requireContext();
+        new MaterialAlertDialogBuilder(context)
+            .setTitle(tag.name)
+            .setItems(new CharSequence[]{
+                getString(R.string.mighty_tags_change_color),
+                getString(R.string.mighty_tags_delete)
+            }, (dialog, which) -> {
+                if (which == 0) {
+                    showTagColorPickerDialog(tag);
+                } else {
+                    Tag.deleteTag(context.getContentResolver(), tag.id);
+                    CustomToast.show(context, R.string.mighty_tags_deleted);
+                }
             })
-            .setPositiveButton(R.string.mighty_tags_add, (dialog, which) -> showCreateTagDialog())
             .setNegativeButton(android.R.string.cancel, null)
+            .show();
+    }
+
+    private void showTagColorPickerDialog(Tag tag) {
+        final Context context = requireContext();
+        final ColorPickerView colorPickerView = new ColorPickerView(context);
+        colorPickerView.setColor(TagColorUtils.displayColor(tag));
+        colorPickerView.showAlpha(false);
+        colorPickerView.showHex(true);
+        colorPickerView.showPreview(true);
+
+        new MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.mighty_tags_change_color)
+            .setView(colorPickerView)
+            .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                tag.color = colorPickerView.getColor() | 0xFF000000;
+                tag.updatedAt = System.currentTimeMillis();
+                tag.updateTag(context.getContentResolver());
+                CustomToast.show(context, R.string.mighty_tags_color_updated);
+                showManageTagsDialog();
+            })
+            .setNegativeButton(android.R.string.cancel, (dialog, which) -> showManageTagsDialog())
             .show();
     }
 
@@ -753,11 +830,12 @@ public class MightyFeaturesFragment extends ScreenFragment
                 if (name.isEmpty()) {
                     return;
                 }
-                final Tag tag = new Tag(name, 0);
+                final Tag tag = new Tag(name, TagColorUtils.nextAutoColor(context.getContentResolver()));
                 tag.addTag(context.getContentResolver());
                 CustomToast.show(context, R.string.mighty_tags_created);
+                showManageTagsDialog();
             })
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(android.R.string.cancel, (dialog, which) -> showManageTagsDialog())
             .show();
     }
 

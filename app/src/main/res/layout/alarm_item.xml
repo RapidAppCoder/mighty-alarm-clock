@@ -50,9 +50,32 @@
         android:fontFeatureSettings="tnum"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/alarm_label"
-        app:layout_constraintBottom_toTopOf="@+id/days_of_week"
         tools:text="08:30"
         tools:textSize="40sp" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/alarm_tags"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:visibility="gone"
+        app:chipSpacingHorizontal="4dp"
+        app:chipSpacingVertical="2dp"
+        app:singleLine="false"
+        app:layout_constraintStart_toEndOf="@id/digital_clock"
+        app:layout_constraintEnd_toStartOf="@id/on_off_button"
+        app:layout_constraintTop_toTopOf="@id/digital_clock"
+        app:layout_constraintHorizontal_bias="0"
+        tools:visibility="visible" />
+
+    <androidx.constraintlayout.widget.Barrier
+        android:id="@+id/clock_tags_barrier"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:barrierDirection="bottom"
+        app:barrierAllowsGoneWidgets="false"
+        app:constraint_referenced_ids="digital_clock,alarm_tags" />
 
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/days_of_week"
@@ -64,7 +87,7 @@
         android:maxLines="2"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/preemptive_dismiss_button"
-        app:layout_constraintTop_toBottomOf="@+id/digital_clock"
+        app:layout_constraintTop_toBottomOf="@+id/clock_tags_barrier"
         app:layout_constraintBottom_toTopOf="@+id/upcoming_date"
         app:layout_constrainedWidth="true"
         app:layout_constraintHorizontal_bias="0.0"

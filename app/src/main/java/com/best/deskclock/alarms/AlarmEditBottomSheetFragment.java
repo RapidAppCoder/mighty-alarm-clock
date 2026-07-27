@@ -82,6 +82,7 @@ import com.best.deskclock.dialogfragment.VolumeCrescendoDurationDialogFragment;
 import com.best.deskclock.events.Events;
 import com.best.deskclock.mighty.LastCreatedAlarmDefaults;
 import com.best.deskclock.mighty.exchange.ExchangeManager;
+import com.best.deskclock.mighty.tags.TagColorUtils;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.AlarmInstance;
 import com.best.deskclock.provider.Tag;
@@ -1107,7 +1108,7 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
                     showAssignTagsDialog(summary, pendingCheckedIds);
                     return;
                 }
-                final Tag tag = new Tag(name, 0);
+                final Tag tag = new Tag(name, TagColorUtils.nextAutoColor(context.getContentResolver()));
                 tag.addTag(context.getContentResolver());
                 pendingCheckedIds.add(tag.id);
                 CustomToast.show(context, R.string.mighty_tags_created);

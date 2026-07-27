@@ -1574,12 +1574,14 @@
     <string name="mighty_tags_assign_title">Assign tags</string>
     <string name="mighty_tags_create_first">Create tags first under Settings → Mighty features</string>
     <string name="mighty_manage_tags_title">Manage tags</string>
-    <string name="mighty_manage_tags_summary">Create or delete alarm tags</string>
+    <string name="mighty_manage_tags_summary">Create, color, or delete alarm tags</string>
     <string name="mighty_tags_add_title">New tag</string>
     <string name="mighty_tags_add_hint">Tag name</string>
     <string name="mighty_tags_empty">No tags yet. Tap Add to create one.</string>
     <string name="mighty_tags_deleted">Tag deleted</string>
     <string name="mighty_tags_created">Tag created</string>
+    <string name="mighty_tags_change_color">Change color</string>
+    <string name="mighty_tags_color_updated">Tag color updated</string>
     <string name="mighty_tags_add">Add</string>
     <string name="mighty_tags_delete">Delete</string>
     <string name="mighty_display_timezone_globe_title">Show timezone globe</string>

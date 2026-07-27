@@ -761,12 +761,14 @@
     <string name="mighty_tags_with_count">%1$s (%2$d)</string>
     <string name="mighty_tags_create_first">Legen Sie zuerst Tags unter Einstellungen → Mighty-Funktionen an</string>
     <string name="mighty_manage_tags_title">Tags verwalten</string>
-    <string name="mighty_manage_tags_summary">Wecker-Tags erstellen oder löschen</string>
+    <string name="mighty_manage_tags_summary">Wecker-Tags erstellen, einfärben oder löschen</string>
     <string name="mighty_tags_add_title">Neues Tag</string>
     <string name="mighty_tags_add_hint">Tag-Name</string>
     <string name="mighty_tags_empty">Noch keine Tags. Tippen Sie auf Hinzufügen.</string>
     <string name="mighty_tags_deleted">Tag gelöscht</string>
     <string name="mighty_tags_created">Tag erstellt</string>
+    <string name="mighty_tags_change_color">Farbe ändern</string>
+    <string name="mighty_tags_color_updated">Tag-Farbe aktualisiert</string>
     <string name="mighty_tags_add">Hinzufügen</string>
     <string name="mighty_tags_delete">Löschen</string>
     <string name="mighty_display_timezone_globe_title">Zeitzonen-Globus anzeigen</string>

@@ -82,6 +82,7 @@ import com.best.deskclock.events.Events;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.AlarmInstance;
 import com.best.deskclock.provider.Tag;
+import com.best.deskclock.mighty.tags.TagColorUtils;
 import com.best.deskclock.uicomponents.CustomTooltip;
 import com.best.deskclock.uicomponents.EmptyViewController;
 import com.best.deskclock.uicomponents.toast.SnackbarManager;
@@ -870,6 +871,7 @@ public final class AlarmFragment extends DeskClockFragment
 
     @Override
     public void onLoadFinished(@NonNull Loader<Cursor> cursorLoader, Cursor data) {
+        TagColorUtils.ensureColorsAssigned(requireContext().getContentResolver());
         final List<AlarmItemHolder> itemHolders = new ArrayList<>(data.getCount());
 
         // Convert each row in the cursor into an AlarmItemHolder.

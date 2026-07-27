@@ -11,11 +11,13 @@ import static android.view.View.VISIBLE;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.text.format.DateFormat;
 import android.util.TypedValue;
+import android.view.ViewGroup;
 
 import androidx.core.view.HapticFeedbackConstantsCompat;
 import androidx.recyclerview.widget.RecyclerView;
@@ -24,15 +26,20 @@ import com.best.deskclock.R;
 import com.best.deskclock.data.SettingsDAO;
 import com.best.deskclock.data.Weekdays;
 import com.best.deskclock.databinding.AlarmItemBinding;
+import com.best.deskclock.mighty.tags.TagColorUtils;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.AlarmInstance;
+import com.best.deskclock.provider.Tag;
 import com.best.deskclock.utils.AlarmUtils;
 import com.best.deskclock.utils.FormattedTextUtils;
 import com.best.deskclock.utils.RingtoneUtils;
 import com.best.deskclock.utils.ThemeUtils;
 import com.best.deskclock.utils.Utils;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
@@ -120,6 +127,7 @@ public class AlarmItemViewHolder extends RecyclerView.ViewHolder {
         bindExpressiveCardBackground();
         bindAlarmLabel(context, alarm);
         bindClock(alarm);
+        bindTags(context, alarm);
         bindOnOffSwitch(alarm);
         bindRepeatText(context, alarm, alarmInstance);
         bindUpcomingDate(alarm, alarmInstance);
@@ -127,6 +135,42 @@ public class AlarmItemViewHolder extends RecyclerView.ViewHolder {
         bindAlphaAnimation(alarm);
 
         itemView.setContentDescription(mBinding.digitalClock.getText() + " " + alarm.getLabelOrDefault(context));
+    }
+
+    private void bindTags(Context context, Alarm alarm) {
+        final ChipGroup chipGroup = mBinding.alarmTags;
+        chipGroup.removeAllViews();
+
+        if (alarm.id == Alarm.INVALID_ID) {
+            chipGroup.setVisibility(GONE);
+            return;
+        }
+
+        final List<Tag> tags = Tag.getTagsForAlarm(context.getContentResolver(), alarm.id);
+        if (tags.isEmpty()) {
+            chipGroup.setVisibility(GONE);
+            return;
+        }
+
+        final float density = context.getResources().getDisplayMetrics().density;
+        for (Tag tag : tags) {
+            final int bg = TagColorUtils.displayColor(tag);
+            final int fg = TagColorUtils.contrastingTextColor(bg);
+            final Chip chip = new Chip(context);
+            chip.setText(tag.name);
+            chip.setClickable(false);
+            chip.setCheckable(false);
+            chip.setFocusable(false);
+            chip.setEnsureMinTouchTargetSize(false);
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            chip.setChipMinHeight(22f * density);
+            chip.setChipBackgroundColor(ColorStateList.valueOf(bg));
+            chip.setTextColor(fg);
+            chip.setChipStrokeWidth(0f);
+            chipGroup.addView(chip, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+        chipGroup.setVisibility(VISIBLE);
     }
 
     private void bindExpressiveCardBackground() {
