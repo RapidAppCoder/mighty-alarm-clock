@@ -1035,8 +1035,8 @@ public final class SettingsDAO {
      * @return the alarm sorting by time, by time of next alarm and by name.
      */
     public static String getAlarmSorting(SharedPreferences prefs) {
-        // Default value must match the one in res/xml/settings_timer.xml
-        return prefs.getString(KEY_SORT_ALARM, DEFAULT_SORT_BY_ALARM_TIME);
+        // Default value must match the one in res/xml/settings_alarm.xml
+        return prefs.getString(KEY_SORT_ALARM, DEFAULT_SORT_ALARM);
     }
 
     /**
