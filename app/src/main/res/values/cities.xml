@@ -361,6 +361,10 @@
         <item>@string/C359</item>
         <item>@string/C360</item>
         <item>@string/C361</item>
+        <item>@string/C362</item>
+        <item>@string/C363</item>
+        <item>@string/C364</item>
+        <item>@string/C365</item>
     </array>
 
     <!--
@@ -1100,4 +1104,12 @@
     <string name="C360">L<xliff:g id="separator">=</xliff:g>Lord Howe Island<xliff:g id="timezone">|Australia/Lord_Howe</xliff:g></string>
     <!-- Format: [index]=[city name]|[timezone id] - DO NOT TRANSLATE THE TIME ZONE -->
     <string name="C361">C<xliff:g id="separator">=</xliff:g>Chatham Islands<xliff:g id="timezone">|Pacific/Chatham</xliff:g></string>
+    <!-- Format: [index]=[city name]|[timezone id] - DO NOT TRANSLATE THE TIME ZONE -->
+    <string name="C362">N<xliff:g id="separator">=</xliff:g>Nuremberg<xliff:g id="timezone">|Europe/Berlin</xliff:g></string>
+    <!-- Format: [index]=[city name]|[timezone id] - DO NOT TRANSLATE THE TIME ZONE -->
+    <string name="C363">A<xliff:g id="separator">=</xliff:g>Amberg<xliff:g id="timezone">|Europe/Berlin</xliff:g></string>
+    <!-- Format: [index]=[city name]|[timezone id] - DO NOT TRANSLATE THE TIME ZONE -->
+    <string name="C364">E<xliff:g id="separator">=</xliff:g>Ebermannsdorf<xliff:g id="timezone">|Europe/Berlin</xliff:g></string>
+    <!-- Format: [index]=[city name]|[timezone id] - DO NOT TRANSLATE THE TIME ZONE -->
+    <string name="C365">P<xliff:g id="separator">=</xliff:g>Polsingen<xliff:g id="timezone">|Europe/Berlin</xliff:g></string>
 </resources>

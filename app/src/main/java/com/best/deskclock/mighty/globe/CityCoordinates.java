@@ -9,14 +9,25 @@ import java.util.Map;
 import java.util.TimeZone;
 
 /**
- * Approximate geographic coordinates for world-clock cities, keyed by timezone id.
- * Falls back to longitude from the UTC offset and a stable pseudo-latitude when unknown.
+ * Approximate geographic coordinates for world-clock cities.
+ * Prefers a lookup by city resource id (so cities that share a timezone stay distinct),
+ * then falls back to timezone id, then to a UTC-offset estimate.
  */
 final class CityCoordinates {
 
+    private static final Map<String, float[]> BY_CITY_ID = new HashMap<>();
     private static final Map<String, float[]> BY_ZONE = new HashMap<>();
 
     static {
+        // Cities that share a timezone need explicit coordinates.
+        putCity("C263", 48.14f, 11.58f); // Munich
+        putCity("C265", 50.11f, 8.68f);  // Frankfurt
+        putCity("C293", 53.55f, 9.99f);  // Hamburg
+        putCity("C362", 49.45f, 11.08f); // Nuremberg
+        putCity("C363", 49.44f, 11.86f); // Amberg
+        putCity("C364", 49.39f, 11.94f); // Ebermannsdorf
+        putCity("C365", 48.92f, 10.71f); // Polsingen
+
         // Europe
         put("Europe/London", 51.51f, -0.13f);
         put("Europe/Dublin", 53.35f, -6.26f);
@@ -163,6 +174,11 @@ final class CityCoordinates {
      * @return {@code float[]{latitude, longitude}} for the city
      */
     static float[] forCity(City city) {
+        final float[] byId = BY_CITY_ID.get(city.getId());
+        if (byId != null) {
+            return byId;
+        }
+
         final TimeZone timeZone = city.getTimeZone();
         final float[] known = BY_ZONE.get(timeZone.getID());
         if (known != null) {
@@ -172,6 +188,10 @@ final class CityCoordinates {
         final float longitude = timeZone.getRawOffset() / 3_600_000f * 15f;
         final float latitude = (Math.abs(city.getId().hashCode()) % 140) - 70f;
         return new float[]{latitude, longitude};
+    }
+
+    private static void putCity(String cityId, float lat, float lon) {
+        BY_CITY_ID.put(cityId, new float[]{lat, lon});
     }
 
     private static void put(String zoneId, float lat, float lon) {
