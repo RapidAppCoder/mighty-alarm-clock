@@ -44,6 +44,12 @@
     <!-- Needed on API 27+ to read the SSID of the connected Wi-Fi network for per-alarm Wi-Fi rules. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+    <!-- Package visibility for optional Syncthing Fork nudge before exchange scans -->
+    <queries>
+        <package android:name="com.github.catfriend1.syncthingfork" />
+        <package android:name="com.github.catfriend1.syncthingandroid" />
+    </queries>
+
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />

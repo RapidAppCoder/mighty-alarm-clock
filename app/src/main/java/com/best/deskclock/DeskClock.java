@@ -71,6 +71,7 @@ import com.best.deskclock.data.OnSilentSettingsListener;
 import com.best.deskclock.data.SettingsDAO;
 import com.best.deskclock.databinding.DeskClockBinding;
 import com.best.deskclock.events.Events;
+import com.best.deskclock.mighty.exchange.ExchangeManager;
 import com.best.deskclock.settings.PermissionsManagementActivity;
 import com.best.deskclock.settings.SettingsActivity;
 import com.best.deskclock.setup.FirstLaunch;
@@ -170,6 +171,11 @@ public class DeskClock extends BaseActivity implements FabContainer {
      * {@code true} when a settings change necessitates recreating this activity.
      */
     private boolean mShouldRecreate = false;
+
+    /**
+     * Whether the exchange-inbox snackbar was already shown for this activity instance.
+     */
+    private boolean mExchangeInboxHintShown = false;
 
     /**
      * List of supported preference keys used to monitor UI and behavior changes within
@@ -304,6 +310,29 @@ public class DeskClock extends BaseActivity implements FabContainer {
         if (SettingsDAO.isForegroundServiceEnabled(mPrefs)) {
             ContextCompat.startForegroundService(this, new Intent(this, KeepAliveService.class));
         }
+
+        maybeShowExchangeInboxHint();
+    }
+
+    private void maybeShowExchangeInboxHint() {
+        if (mExchangeInboxHintShown || mBinding == null) {
+            return;
+        }
+        final int count = ExchangeManager.getInbox(this).size();
+        if (count <= 0) {
+            return;
+        }
+        mExchangeInboxHintShown = true;
+        final Snackbar snackbar = Snackbar.make(
+            mBinding.contentView,
+            getString(R.string.mighty_exchange_inbox_pending_hint, count),
+            8000);
+        snackbar.setAction(R.string.mighty_exchange_inbox_show_action, v -> {
+            final Intent intent = new Intent(this, SettingsActivity.class);
+            intent.putExtra(SettingsActivity.EXTRA_OPEN_EXCHANGE_INBOX, true);
+            startActivity(intent);
+        });
+        SnackbarManager.show(snackbar);
     }
 
     @Override

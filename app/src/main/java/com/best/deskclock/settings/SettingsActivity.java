@@ -74,6 +74,8 @@ import java.util.zip.ZipOutputStream;
  */
 public final class SettingsActivity extends CollapsingToolbarBaseActivity {
 
+    public static final String EXTRA_OPEN_EXCHANGE_INBOX = "com.best.deskclock.extra.OPEN_EXCHANGE_INBOX";
+
     private static final String KEY_APPBAR_EXPANDED = "key_appbar_expanded";
     private boolean mIsAppBarExpanded = true;
 
@@ -303,6 +305,21 @@ public final class SettingsActivity extends CollapsingToolbarBaseActivity {
             updateSettingsVisibility();
 
             displayWarningIfEssentialPermissionAreNotGranted();
+
+            maybeOpenExchangeInbox();
+        }
+
+        private void maybeOpenExchangeInbox() {
+            final Intent intent = requireActivity().getIntent();
+            if (intent == null || !intent.getBooleanExtra(EXTRA_OPEN_EXCHANGE_INBOX, false)) {
+                return;
+            }
+            intent.removeExtra(EXTRA_OPEN_EXCHANGE_INBOX);
+            final MightyFeaturesFragment fragment = new MightyFeaturesFragment();
+            final Bundle args = new Bundle();
+            args.putBoolean(MightyFeaturesFragment.ARG_OPEN_EXCHANGE_INBOX, true);
+            fragment.setArguments(args);
+            animateAndShowFragment(fragment);
         }
 
         @Override

@@ -270,4 +270,7 @@ public class PreferencesDefaultValues {
     public static final int DEFAULT_WIDGETS_CUSTOM_COLOR = Color.WHITE;
     public static final int DEFAULT_WIDGETS_FONT_SIZE = 70;
     public static final boolean DEFAULT_WIDGETS_APPLY_HORIZONTAL_PADDING = true;
+
+    // Mighty / exchange
+    public static final boolean DEFAULT_MIGHTY_EXCHANGE_NUDGE_SYNCTHING = false;
 }

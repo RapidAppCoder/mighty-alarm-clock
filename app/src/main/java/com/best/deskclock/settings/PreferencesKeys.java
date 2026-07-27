@@ -357,6 +357,7 @@ public class PreferencesKeys {
     public static final String KEY_MIGHTY_EXCHANGE_DEVICE_NAME = "key_mighty_exchange_device_name";
     public static final String KEY_MIGHTY_EXCHANGE_ADD_FOLDER = "key_mighty_exchange_add_folder";
     public static final String KEY_MIGHTY_EXCHANGE_FOLDERS = "key_mighty_exchange_folders";
+    public static final String KEY_MIGHTY_EXCHANGE_NUDGE_SYNCTHING = "key_mighty_exchange_nudge_syncthing";
     public static final String KEY_MIGHTY_EXCHANGE_SCAN_NOW = "key_mighty_exchange_scan_now";
     public static final String KEY_MIGHTY_EXCHANGE_INBOX = "key_mighty_exchange_inbox";
     public static final String KEY_MIGHTY_MANAGE_TAGS = "key_mighty_manage_tags";

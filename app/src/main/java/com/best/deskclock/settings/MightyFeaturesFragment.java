@@ -34,10 +34,12 @@ import androidx.preference.SwitchPreferenceCompat;
 
 import com.best.deskclock.R;
 import com.best.deskclock.base.AppExecutors;
+import com.best.deskclock.data.SettingsDAO;
 import com.best.deskclock.mighty.backup.BackupWorker;
 import com.best.deskclock.mighty.backup.JsonBackupManager;
 import com.best.deskclock.mighty.exchange.ExchangeManager;
 import com.best.deskclock.mighty.exchange.ExchangeScanWorker;
+import com.best.deskclock.mighty.exchange.SyncthingNudge;
 import com.best.deskclock.mighty.mute.GlobalMuteController;
 import com.best.deskclock.mighty.stats.DeviceStats;
 import com.best.deskclock.mighty.tags.TagColorUtils;
@@ -62,6 +64,8 @@ import java.util.Locale;
  */
 public class MightyFeaturesFragment extends ScreenFragment
     implements Preference.OnPreferenceClickListener, Preference.OnPreferenceChangeListener {
+
+    public static final String ARG_OPEN_EXCHANGE_INBOX = "arg_open_exchange_inbox";
 
     Preference mDeviceStatsPref;
     Preference mViewEventLogPref;
@@ -155,6 +159,21 @@ public class MightyFeaturesFragment extends ScreenFragment
         super.onResume();
 
         refreshSummaries();
+        maybeOpenExchangeInboxFromArgs();
+    }
+
+    private void maybeOpenExchangeInboxFromArgs() {
+        final Bundle args = getArguments();
+        if (args == null || !args.getBoolean(ARG_OPEN_EXCHANGE_INBOX, false)) {
+            return;
+        }
+        args.putBoolean(ARG_OPEN_EXCHANGE_INBOX, false);
+        // Defer until the fragment view is ready and preference screen is shown.
+        if (getView() != null) {
+            getView().post(this::showExchangeInboxDialog);
+        } else {
+            showExchangeInboxDialog();
+        }
     }
 
     @Override
@@ -266,7 +285,17 @@ public class MightyFeaturesFragment extends ScreenFragment
                 final Context appContext = context.getApplicationContext();
                 AppExecutors.getDiskIO().execute(() -> {
                     ExchangeManager.scanAll(appContext);
-                    AppExecutors.getMainThread().post(this::refreshSummaries);
+                    final int inboxCount = ExchangeManager.getInbox(appContext).size();
+                    AppExecutors.getMainThread().post(() -> {
+                        if (!isAdded()) {
+                            return;
+                        }
+                        refreshSummaries();
+                        if (inboxCount > 0) {
+                            CustomToast.show(requireContext(),
+                                getString(R.string.mighty_exchange_inbox_after_scan, inboxCount));
+                        }
+                    });
                 });
             }
 
@@ -567,11 +596,19 @@ public class MightyFeaturesFragment extends ScreenFragment
     private void showManageExchangeFoldersDialog() {
         final Context context = requireContext();
         final List<ExchangeManager.ExchangeFolder> folders = ExchangeManager.getFolders(context);
+        final boolean nudgeEnabled = SettingsDAO.isExchangeSyncthingNudgeEnabled(mPrefs);
+        final String nudgeLabel = getString(R.string.mighty_exchange_nudge_syncthing_toggle,
+            getString(nudgeEnabled
+                ? R.string.mighty_exchange_nudge_syncthing_on
+                : R.string.mighty_exchange_nudge_syncthing_off));
+        final String openSyncthingLabel = getString(R.string.mighty_exchange_open_syncthing);
 
         if (folders.isEmpty()) {
             new MaterialAlertDialogBuilder(context)
                 .setTitle(R.string.mighty_exchange_folders_title)
                 .setMessage(R.string.mighty_exchange_folders_empty)
+                .setItems(new CharSequence[]{nudgeLabel, openSyncthingLabel},
+                    (dialog, which) -> handleExchangeFoldersSyncthingAction(which))
                 .setPositiveButton(R.string.mighty_exchange_add_folder_title,
                     (dialog, which) -> mExchangeFolderPicker.launch(createOpenTreeIntent()))
                 .setNegativeButton(android.R.string.cancel, null)
@@ -579,20 +616,47 @@ public class MightyFeaturesFragment extends ScreenFragment
             return;
         }
 
-        final CharSequence[] items = new CharSequence[folders.size()];
+        final CharSequence[] items = new CharSequence[folders.size() + 2];
+        items[0] = nudgeLabel;
+        items[1] = openSyncthingLabel;
         for (int i = 0; i < folders.size(); i++) {
             final ExchangeManager.ExchangeFolder folder = folders.get(i);
-            items[i] = getString(R.string.mighty_exchange_folder_list_item,
+            items[i + 2] = getString(R.string.mighty_exchange_folder_list_item,
                 folder.name, importPolicyLabel(folder.importPolicy));
         }
 
         new MaterialAlertDialogBuilder(context)
             .setTitle(R.string.mighty_exchange_folders_title)
-            .setItems(items, (dialog, which) -> showExchangeFolderActionsDialog(which))
+            .setItems(items, (dialog, which) -> {
+                if (which < 2) {
+                    handleExchangeFoldersSyncthingAction(which);
+                } else {
+                    showExchangeFolderActionsDialog(which - 2);
+                }
+            })
             .setPositiveButton(R.string.mighty_exchange_add_folder_title,
                 (d, w) -> mExchangeFolderPicker.launch(createOpenTreeIntent()))
             .setNegativeButton(android.R.string.cancel, null)
             .show();
+    }
+
+    private void handleExchangeFoldersSyncthingAction(int which) {
+        if (which == 0) {
+            toggleExchangeSyncthingNudge();
+            return;
+        }
+        if (!SyncthingNudge.openApp(requireContext())) {
+            CustomToast.show(requireContext(), R.string.mighty_exchange_syncthing_not_installed);
+        }
+    }
+
+    private void toggleExchangeSyncthingNudge() {
+        final boolean next = !SettingsDAO.isExchangeSyncthingNudgeEnabled(mPrefs);
+        mPrefs.edit().putBoolean(KEY_MIGHTY_EXCHANGE_NUDGE_SYNCTHING, next).apply();
+        CustomToast.show(requireContext(), next
+            ? R.string.mighty_exchange_nudge_syncthing_enabled_toast
+            : R.string.mighty_exchange_nudge_syncthing_disabled_toast);
+        showManageExchangeFoldersDialog();
     }
 
     private void showExchangeFolderActionsDialog(int folderIndex) {

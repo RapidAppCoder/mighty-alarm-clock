@@ -25,8 +25,10 @@ import androidx.documentfile.provider.DocumentFile;
 
 import com.best.deskclock.alarms.AlarmStateManager;
 import com.best.deskclock.data.Weekdays;
+import com.best.deskclock.mighty.tags.TagColorUtils;
 import com.best.deskclock.provider.Alarm;
 import com.best.deskclock.provider.EventLogStore;
+import com.best.deskclock.provider.Tag;
 import com.best.deskclock.utils.LogUtils;
 import com.best.deskclock.utils.SdkUtils;
 
@@ -449,6 +451,7 @@ public final class ExchangeManager {
      * files.
      */
     public static void scanAll(Context context) {
+        SyncthingNudge.nudgeIfEnabled(context);
         refreshPresence(context);
         for (ExchangeFolder folder : getFolders(context)) {
             scanFolder(context, folder);
@@ -513,7 +516,10 @@ public final class ExchangeManager {
         final Device to = Device.fromJson(transfer.optJSONObject("to"));
 
         if (folder.importPolicy == ImportPolicy.AUTO) {
-            createAlarmFromJson(context, alarmJson);
+            final Alarm imported = createAlarmFromJson(context, alarmJson);
+            if (imported != null) {
+                applyFolderTag(context, imported, folder.name);
+            }
             deleteTransferFile(context, folder, fileName);
             LogUtils.i("ExchangeManager: auto-imported alarm from %s/%s", folder.name, fileName);
         } else {
@@ -615,7 +621,10 @@ public final class ExchangeManager {
      */
     public static void acceptImport(Context context, PendingImport pending) {
         try {
-            createAlarmFromJson(context, new JSONObject(pending.alarmJson));
+            final Alarm imported = createAlarmFromJson(context, new JSONObject(pending.alarmJson));
+            if (imported != null) {
+                applyFolderTag(context, imported, pending.folderName);
+            }
         } catch (JSONException e) {
             LogUtils.e("ExchangeManager: failed to accept import " + pending.id, e);
         }
@@ -666,7 +675,8 @@ public final class ExchangeManager {
         }
     }
 
-    private static void createAlarmFromJson(Context context, JSONObject alarmJson) {
+    @Nullable
+    private static Alarm createAlarmFromJson(Context context, JSONObject alarmJson) {
         try {
             // Avoid Alarm()'s default constructor: it reads ringtone settings via DataModel, which
             // may only be called on the main thread. Import/scan often run on a background executor.
@@ -716,9 +726,37 @@ public final class ExchangeManager {
             AlarmStateManager.registerInstance(context, instance, true);
 
             EventLogStore.logEvent(cr, "ALARM_IMPORTED_FROM_EXCHANGE", saved.stableUuid, saved.label, null);
+            return saved;
         } catch (Exception e) {
             LogUtils.e("ExchangeManager: failed to create alarm from imported JSON", e);
+            return null;
         }
+    }
+
+    /**
+     * Ensures a tag named like the exchange folder exists, then assigns it to the alarm.
+     */
+    private static void applyFolderTag(Context context, Alarm alarm, String folderName) {
+        if (alarm == null || alarm.id == Alarm.INVALID_ID || TextUtils.isEmpty(folderName)) {
+            return;
+        }
+        final Tag tag = ensureFolderTag(context, folderName.trim());
+        if (tag == null || tag.id == Tag.INVALID_ID) {
+            return;
+        }
+        Tag.addTagToAlarm(context.getContentResolver(), alarm.id, tag.id);
+    }
+
+    @Nullable
+    private static Tag ensureFolderTag(Context context, String folderName) {
+        final ContentResolver cr = context.getContentResolver();
+        for (Tag existing : Tag.getTags(cr)) {
+            if (folderName.equals(existing.name)) {
+                return existing;
+            }
+        }
+        final Tag tag = new Tag(folderName, TagColorUtils.nextAutoColor(cr));
+        return tag.addTag(cr);
     }
 
     // ---------------------------------------------------------------------

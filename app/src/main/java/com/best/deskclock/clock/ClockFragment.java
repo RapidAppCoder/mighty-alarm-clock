@@ -227,7 +227,7 @@ public final class ClockFragment extends DeskClockFragment {
         mBinding.cityRecyclerView.setAdapter(mCityAdapter);
 
         updateTimezoneGlobe();
-        if (isTabSelected()) {
+        if (isTabSelected() && mBinding.timezoneGlobeView != null) {
             mBinding.timezoneGlobeView.resumeAutoRotation();
         }
 

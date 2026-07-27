@@ -1545,6 +1545,18 @@
     <!-- Summary showing the number of configured exchange folders. %1$d = count -->
     <string name="mighty_exchange_folders_summary">%1$d folder(s)</string>
     <string name="mighty_exchange_folders_empty">No exchange folders configured</string>
+    <string name="mighty_exchange_nudge_syncthing_title">Start Syncthing before exchange scan</string>
+    <string name="mighty_exchange_nudge_syncthing_summary">Sends a start signal to Syncthing Fork before each scan. Enable remote control under Syncthing → Settings → Experimental, and set battery usage to Unrestricted.</string>
+    <string name="mighty_exchange_nudge_syncthing_toggle">Start Syncthing before scan: %1$s</string>
+    <string name="mighty_exchange_nudge_syncthing_on">on</string>
+    <string name="mighty_exchange_nudge_syncthing_off">off</string>
+    <string name="mighty_exchange_nudge_syncthing_enabled_toast">Syncthing will be started before each exchange scan</string>
+    <string name="mighty_exchange_nudge_syncthing_disabled_toast">Syncthing nudge before exchange scan disabled</string>
+    <string name="mighty_exchange_open_syncthing">Open Syncthing</string>
+    <string name="mighty_exchange_syncthing_not_installed">Syncthing Fork is not installed</string>
+    <string name="mighty_exchange_inbox_pending_hint">%1$d new alarm(s) in the exchange inbox</string>
+    <string name="mighty_exchange_inbox_show_action">Show</string>
+    <string name="mighty_exchange_inbox_after_scan">%1$d alarm(s) waiting in the exchange inbox</string>
     <!-- List row: %1$s = folder name, %2$s = import policy label -->
     <string name="mighty_exchange_folder_list_item">%1$s\n%2$s</string>
     <string name="mighty_exchange_import_policy_ask">Ask before importing</string>

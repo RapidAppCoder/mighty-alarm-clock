@@ -1048,6 +1048,14 @@ public final class SettingsDAO {
     }
 
     /**
+     * @return {@code true} if Syncthing should be nudged before each exchange scan.
+     */
+    public static boolean isExchangeSyncthingNudgeEnabled(SharedPreferences prefs) {
+        // Default value must match the one in res/xml/settings_mighty_features.xml
+        return prefs.getBoolean(KEY_MIGHTY_EXCHANGE_NUDGE_SYNCTHING, DEFAULT_MIGHTY_EXCHANGE_NUDGE_SYNCTHING);
+    }
+
+    /**
      * @return {@code true} if the long press on the alarm FAB is enabled; {@code false} otherwise.
      */
     public static boolean isAlarmFabLongPressEnabled(SharedPreferences prefs) {
