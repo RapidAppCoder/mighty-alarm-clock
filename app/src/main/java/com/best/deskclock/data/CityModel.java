@@ -41,6 +41,9 @@ import java.util.TimeZone;
  */
 final class CityModel {
 
+    /** Default world-clock city: Ebermannsdorf (Bavaria). */
+    private static final String DEFAULT_WORLD_CITY_ID = "C364";
+
     private final Context mContext;
 
     private final SharedPreferences mPrefs;
@@ -192,7 +195,8 @@ final class CityModel {
      */
     List<City> getSelectedCities() {
         if (mSelectedCities == null) {
-            final List<City> selectedCities = CityDAO.getSelectedCities(mPrefs, getCityMap());
+            List<City> selectedCities = CityDAO.getSelectedCities(mPrefs, getCityMap());
+            selectedCities = ensureDefaultWorldCity(selectedCities);
 
             final String citySorting = SettingsDAO.getCitySorting(mPrefs);
 
@@ -211,6 +215,31 @@ final class CityModel {
         }
 
         return mSelectedCities;
+    }
+
+    /**
+     * On first use (empty world-clock selection), preselect Ebermannsdorf ({@code C364}).
+     */
+    private List<City> ensureDefaultWorldCity(List<City> selectedCities) {
+        if (mPrefs.getBoolean(PreferencesKeys.KEY_DEFAULT_WORLD_CITY_SEEDED, false)) {
+            return selectedCities;
+        }
+
+        if (!selectedCities.isEmpty()) {
+            mPrefs.edit().putBoolean(PreferencesKeys.KEY_DEFAULT_WORLD_CITY_SEEDED, true).apply();
+            return selectedCities;
+        }
+
+        final City defaultCity = getCityMap().get(DEFAULT_WORLD_CITY_ID);
+        mPrefs.edit().putBoolean(PreferencesKeys.KEY_DEFAULT_WORLD_CITY_SEEDED, true).apply();
+        if (defaultCity == null) {
+            return selectedCities;
+        }
+
+        final List<City> seeded = new ArrayList<>(1);
+        seeded.add(defaultCity);
+        CityDAO.setSelectedCities(mPrefs, seeded);
+        return seeded;
     }
 
     /**

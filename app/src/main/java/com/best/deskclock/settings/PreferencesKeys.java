@@ -11,6 +11,9 @@ public class PreferencesKeys {
     public static final String KEY_IS_FIRST_LAUNCH = "key_is_first_launch";
     public static final String KEY_SAMPLE_ALARMS_SEEDED = "key_sample_alarms_seeded";
 
+    /** True after the default world-clock city (Ebermannsdorf) has been offered once. */
+    public static final String KEY_DEFAULT_WORLD_CITY_SEEDED = "key_default_world_city_seeded";
+
     // **************
     // ** SETTINGS **
     // **************

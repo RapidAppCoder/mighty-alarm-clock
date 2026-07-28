@@ -14,6 +14,7 @@ import android.graphics.Path;
 import android.util.AttributeSet;
 import android.view.Choreographer;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 
@@ -25,143 +26,37 @@ import java.util.List;
 import java.util.TimeZone;
 
 /**
- * Orthographic globe with filled continent outlines and markers for selected world-clock cities.
+ * Orthographic globe with Natural Earth land polygons, optional country borders when zoomed,
+ * and markers for selected world-clock cities.
  * <p>
- * Slowly auto-rotates until the user drags it; auto-rotation resumes after 30 seconds of idle
- * time or when {@link #resumeAutoRotation()} is called (e.g. after returning to the clock tab).
- * Dragging rotates the globe freely (trackball); tapping a city (on the globe or via
- * {@link #focusCity}) animates so that city faces the viewer.
+ * Slowly auto-rotates until the user drags or pinches; auto-rotation resumes after 30 seconds
+ * of idle time or when {@link #resumeAutoRotation()} is called. Dragging rotates freely
+ * (trackball); pinch zooms so medium/large country borders become visible. Tapping a city
+ * animates so that city faces the viewer.
  * <p>
  * A translucent night overlay follows the real solar terminator (UTC time + seasonal declination).
  */
 public class TimezoneGlobeView extends View {
 
     private static final int BAND_COUNT = 6;
-    private static final int EDGE_SUBDIVISIONS = 12;
     private static final int TERMINATOR_SAMPLES = 96;
     private static final int GRATICULE_SAMPLES = 48;
     private static final float HIT_RADIUS_DP = 18f;
     private static final float DRAG_DEG_PER_PX = 0.5f;
+    private static final float MIN_ZOOM = 1f;
+    private static final float MAX_ZOOM = 5f;
+    /** Country borders appear at and above this zoom level. */
+    private static final float COUNTRY_BORDER_ZOOM = 1.65f;
     /** One full revolution about every 90 seconds. */
     private static final float AUTO_ROTATION_DEG_PER_SEC = 4f;
     private static final long AUTO_ROTATION_RESUME_DELAY_MS = 30_000L;
     private static final TimeZone UTC = TimeZone.getTimeZone("UTC");
 
-    /**
-     * Continent outlines as closed [lat, lon] rings (more precise than the previous coarse blobs).
-     */
-    private static final float[][][] CONTINENTS = {
-        // Africa
-        {
-            {37.0f, -9.5f}, {37.2f, -7.0f}, {36.8f, -2.0f}, {37.0f, 3.0f}, {37.1f, 9.5f},
-            {36.0f, 10.5f}, {33.0f, 11.5f}, {32.5f, 15.0f}, {32.0f, 25.0f}, {31.2f, 32.5f},
-            {29.5f, 34.9f}, {22.0f, 37.0f}, {15.0f, 42.0f}, {12.0f, 51.0f}, {5.0f, 48.0f},
-            {-1.0f, 42.0f}, {-5.0f, 39.0f}, {-12.0f, 40.5f}, {-19.0f, 36.0f}, {-26.0f, 33.0f},
-            {-34.8f, 25.5f}, {-34.8f, 20.0f}, {-34.0f, 18.0f}, {-28.0f, 16.0f}, {-22.0f, 14.0f},
-            {-17.0f, 11.5f}, {-12.0f, 13.0f}, {-6.0f, 12.0f}, {0.0f, 9.0f}, {4.5f, 7.0f},
-            {5.0f, -1.0f}, {4.5f, -8.0f}, {6.0f, -12.0f}, {10.0f, -16.0f}, {14.5f, -17.5f},
-            {20.0f, -17.0f}, {24.0f, -16.0f}, {28.0f, -13.0f}, {32.0f, -9.5f}, {35.5f, -6.0f},
-            {37.0f, -9.5f}
-        },
-        // Europe (incl. Scandinavia / UK)
-        {
-            {71.0f, -8.0f}, {70.5f, 5.0f}, {71.0f, 25.0f}, {70.0f, 30.0f}, {69.0f, 33.0f},
-            {66.0f, 30.0f}, {64.0f, 40.0f}, {60.0f, 30.0f}, {56.0f, 28.0f}, {54.0f, 20.0f},
-            {50.0f, 30.0f}, {46.0f, 35.0f}, {42.0f, 28.0f}, {41.0f, 29.0f}, {39.0f, 26.0f},
-            {36.5f, 28.0f}, {36.0f, 22.0f}, {37.5f, 15.0f}, {38.0f, 12.0f}, {36.5f, -5.5f},
-            {38.5f, -9.5f}, {43.0f, -9.5f}, {48.0f, -5.0f}, {50.0f, -5.5f}, {52.0f, -10.0f},
-            {54.0f, -8.0f}, {58.0f, -7.0f}, {59.5f, -3.0f}, {62.0f, -7.0f}, {65.0f, -14.0f},
-            {66.0f, -18.0f}, {65.0f, -22.0f}, {64.0f, -22.0f}, {63.5f, -16.0f}, {66.0f, -14.0f},
-            {70.0f, -18.0f}, {71.0f, -8.0f}
-        },
-        // Asia
-        {
-            {77.0f, 60.0f}, {77.0f, 100.0f}, {75.0f, 140.0f}, {70.0f, 160.0f}, {65.0f, 170.0f},
-            {60.0f, 165.0f}, {55.0f, 160.0f}, {50.0f, 155.0f}, {45.0f, 145.0f}, {42.0f, 142.0f},
-            {35.0f, 140.0f}, {33.0f, 130.0f}, {30.0f, 122.0f}, {22.0f, 120.0f}, {18.0f, 110.0f},
-            {10.0f, 105.0f}, {5.0f, 100.0f}, {1.0f, 104.0f}, {-5.0f, 105.0f}, {-8.0f, 115.0f},
-            {-10.0f, 120.0f}, {-8.0f, 130.0f}, {-5.0f, 140.0f}, {0.0f, 130.0f}, {5.0f, 120.0f},
-            {10.0f, 100.0f}, {15.0f, 95.0f}, {20.0f, 90.0f}, {22.0f, 70.0f}, {25.0f, 60.0f},
-            {28.0f, 50.0f}, {30.0f, 48.0f}, {35.0f, 45.0f}, {40.0f, 44.0f}, {45.0f, 48.0f},
-            {50.0f, 50.0f}, {55.0f, 45.0f}, {60.0f, 50.0f}, {65.0f, 55.0f}, {70.0f, 60.0f},
-            {77.0f, 60.0f}
-        },
-        // North America
-        {
-            {71.0f, -156.0f}, {70.0f, -140.0f}, {70.0f, -120.0f}, {72.0f, -95.0f}, {70.0f, -80.0f},
-            {65.0f, -65.0f}, {60.0f, -64.0f}, {55.0f, -60.0f}, {50.0f, -55.0f}, {47.0f, -52.0f},
-            {45.0f, -60.0f}, {42.0f, -70.0f}, {35.0f, -75.0f}, {30.0f, -81.0f}, {25.0f, -80.0f},
-            {24.0f, -82.0f}, {22.0f, -85.0f}, {18.0f, -88.0f}, {15.0f, -90.0f}, {14.0f, -92.0f},
-            {16.0f, -98.0f}, {20.0f, -105.0f}, {23.0f, -110.0f}, {28.0f, -114.0f}, {32.0f, -117.0f},
-            {35.0f, -121.0f}, {40.0f, -124.0f}, {45.0f, -124.0f}, {48.0f, -125.0f}, {50.0f, -128.0f},
-            {55.0f, -132.0f}, {58.0f, -138.0f}, {60.0f, -146.0f}, {62.0f, -150.0f}, {65.0f, -155.0f},
-            {68.0f, -165.0f}, {70.0f, -162.0f}, {71.0f, -156.0f}
-        },
-        // Central America / Mexico tip already in NA; add Greenland
-        {
-            {83.0f, -40.0f}, {80.0f, -20.0f}, {75.0f, -18.0f}, {70.0f, -22.0f}, {65.0f, -38.0f},
-            {60.0f, -44.0f}, {60.0f, -50.0f}, {65.0f, -53.0f}, {70.0f, -54.0f}, {75.0f, -60.0f},
-            {78.0f, -70.0f}, {80.0f, -65.0f}, {83.0f, -40.0f}
-        },
-        // South America
-        {
-            {12.5f, -71.0f}, {12.0f, -62.0f}, {10.0f, -61.0f}, {8.0f, -59.0f}, {5.0f, -52.0f},
-            {2.0f, -50.0f}, {-2.0f, -44.0f}, {-5.0f, -35.0f}, {-10.0f, -36.0f}, {-15.0f, -39.0f},
-            {-20.0f, -40.0f}, {-25.0f, -48.0f}, {-30.0f, -50.0f}, {-34.0f, -53.0f}, {-40.0f, -62.0f},
-            {-45.0f, -66.0f}, {-50.0f, -69.0f}, {-54.0f, -68.0f}, {-55.0f, -67.0f}, {-54.0f, -70.0f},
-            {-50.0f, -74.0f}, {-45.0f, -74.0f}, {-40.0f, -73.5f}, {-30.0f, -71.5f}, {-20.0f, -70.5f},
-            {-15.0f, -75.5f}, {-10.0f, -78.0f}, {-5.0f, -81.0f}, {0.0f, -80.0f}, {5.0f, -77.0f},
-            {10.0f, -75.0f}, {12.5f, -71.0f}
-        },
-        // Australia
-        {
-            {-10.5f, 142.0f}, {-12.0f, 136.0f}, {-14.0f, 130.0f}, {-16.0f, 124.0f}, {-20.0f, 118.0f},
-            {-25.0f, 114.0f}, {-32.0f, 115.5f}, {-35.0f, 118.0f}, {-35.5f, 125.0f}, {-34.0f, 135.0f},
-            {-38.0f, 141.0f}, {-39.0f, 146.0f}, {-37.5f, 150.0f}, {-32.0f, 152.5f}, {-28.0f, 153.5f},
-            {-22.0f, 150.0f}, {-18.0f, 146.0f}, {-15.0f, 145.0f}, {-12.0f, 143.0f}, {-10.5f, 142.0f}
-        },
-        // New Zealand (North + South Island simplified)
-        {
-            {-34.5f, 173.0f}, {-36.0f, 174.5f}, {-38.0f, 178.0f}, {-41.5f, 175.0f}, {-41.0f, 173.0f},
-            {-39.0f, 174.0f}, {-36.5f, 174.0f}, {-34.5f, 173.0f}
-        },
-        {
-            {-40.5f, 172.5f}, {-41.5f, 174.0f}, {-43.0f, 173.0f}, {-46.5f, 168.0f}, {-46.0f, 166.5f},
-            {-44.0f, 167.5f}, {-42.0f, 171.0f}, {-40.5f, 172.5f}
-        },
-        // Madagascar
-        {
-            {-12.0f, 49.5f}, {-15.0f, 50.5f}, {-20.0f, 48.5f}, {-25.5f, 47.0f}, {-25.0f, 44.0f},
-            {-22.0f, 43.2f}, {-16.0f, 44.5f}, {-13.0f, 48.0f}, {-12.0f, 49.5f}
-        },
-        // Japan
-        {
-            {45.5f, 141.5f}, {43.0f, 145.5f}, {41.5f, 141.0f}, {38.0f, 141.0f}, {35.0f, 140.0f},
-            {34.0f, 136.0f}, {33.0f, 133.0f}, {31.0f, 131.0f}, {33.5f, 130.0f}, {35.5f, 133.0f},
-            {37.0f, 137.0f}, {40.0f, 140.0f}, {43.0f, 141.0f}, {45.5f, 141.5f}
-        },
-        // British Isles (sharper than Europe blob)
-        {
-            {58.5f, -5.0f}, {57.5f, -2.0f}, {55.0f, -1.5f}, {53.5f, 0.0f}, {51.5f, 1.5f},
-            {50.5f, -1.0f}, {50.0f, -5.5f}, {51.5f, -5.0f}, {53.0f, -4.5f}, {54.5f, -5.5f},
-            {55.5f, -6.5f}, {57.0f, -6.0f}, {58.5f, -5.0f}
-        },
-        {
-            {55.3f, -6.0f}, {55.0f, -7.5f}, {54.0f, -10.0f}, {52.0f, -10.0f}, {51.5f, -9.5f},
-            {52.0f, -6.0f}, {53.5f, -6.0f}, {54.5f, -5.5f}, {55.3f, -6.0f}
-        },
-        // Antarctica (split so dateline does not tear the fill)
-        {
-            {-70.0f, -170.0f}, {-68.0f, -120.0f}, {-66.0f, -60.0f}, {-65.0f, 0.0f}, {-66.0f, 60.0f},
-            {-68.0f, 120.0f}, {-70.0f, 170.0f}, {-78.0f, 170.0f}, {-82.0f, 120.0f}, {-84.0f, 60.0f},
-            {-85.0f, 0.0f}, {-84.0f, -60.0f}, {-82.0f, -120.0f}, {-78.0f, -170.0f}, {-70.0f, -170.0f}
-        }
-    };
-
     private final Paint mSpherePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mBandPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mContinentFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mContinentStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint mCountryBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mNightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint mDotRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -181,6 +76,7 @@ public class TimezoneGlobeView extends View {
     private float[] mOutX = new float[256];
     private float[] mOutY = new float[256];
     private float[] mOutZ = new float[256];
+    private boolean[] mRunSeen = new boolean[256];
 
     /**
      * Row-major 3×3 rotation: view = R × geo, where geo is
@@ -203,9 +99,14 @@ public class TimezoneGlobeView extends View {
     private float mDownX;
     private float mDownY;
     private boolean mMoved;
+    private boolean mScaling;
+    private float mZoom = 1f;
+    private int mEdgeSubdivisions = 4;
     private List<City> mCities = new ArrayList<>();
     private String mFocusedCityId;
     private ValueAnimator mRotationAnimator;
+    private GlobeMapData mMapData;
+    private ScaleGestureDetector mScaleDetector;
 
     private boolean mAutoRotating;
     private long mLastFrameTimeNanos;
@@ -248,6 +149,32 @@ public class TimezoneGlobeView extends View {
     }
 
     private void init() {
+        mMapData = GlobeMapData.get(getContext());
+        mScaleDetector = new ScaleGestureDetector(getContext(),
+            new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                @Override
+                public boolean onScaleBegin(ScaleGestureDetector detector) {
+                    mScaling = true;
+                    onUserInteracted();
+                    if (mRotationAnimator != null) {
+                        mRotationAnimator.cancel();
+                    }
+                    return true;
+                }
+
+                @Override
+                public boolean onScale(ScaleGestureDetector detector) {
+                    mZoom = clamp(mZoom * detector.getScaleFactor(), MIN_ZOOM, MAX_ZOOM);
+                    invalidate();
+                    return true;
+                }
+
+                @Override
+                public void onScaleEnd(ScaleGestureDetector detector) {
+                    mScaling = false;
+                }
+            });
+
         mSpherePaint.setStyle(Paint.Style.FILL);
         // Brighter day-side ocean; night is darkened by {@link #drawNightSide}.
         mSpherePaint.setColor(Color.parseColor("#FF1A6A9E"));
@@ -260,9 +187,14 @@ public class TimezoneGlobeView extends View {
         mContinentFillPaint.setColor(Color.parseColor("#CC5BC97E"));
 
         mContinentStrokePaint.setStyle(Paint.Style.STROKE);
-        mContinentStrokePaint.setStrokeWidth(dp(1.2f));
+        mContinentStrokePaint.setStrokeWidth(dp(1.0f));
         mContinentStrokePaint.setColor(Color.parseColor("#EE2E6B45"));
         mContinentStrokePaint.setStrokeJoin(Paint.Join.ROUND);
+
+        mCountryBorderPaint.setStyle(Paint.Style.STROKE);
+        mCountryBorderPaint.setStrokeWidth(dp(1.0f));
+        mCountryBorderPaint.setColor(Color.parseColor("#DD1B4D3A"));
+        mCountryBorderPaint.setStrokeJoin(Paint.Join.ROUND);
 
         mNightPaint.setStyle(Paint.Style.FILL);
         mNightPaint.setColor(Color.parseColor("#B3081428"));
@@ -294,7 +226,29 @@ public class TimezoneGlobeView extends View {
      */
     public void setCities(List<City> cities) {
         mCities = cities != null ? new ArrayList<>(cities) : new ArrayList<>();
+        if (mFocusedCityId == null && !mCities.isEmpty()) {
+            City preferred = null;
+            for (City city : mCities) {
+                if ("C364".equals(city.getId())) {
+                    preferred = city;
+                    break;
+                }
+            }
+            if (preferred == null) {
+                preferred = mCities.get(0);
+            }
+            orientToCity(preferred);
+        }
         invalidate();
+    }
+
+    /** Instantly orients the globe so {@code city} faces the viewer (no animation). */
+    private void orientToCity(City city) {
+        final float[] coords = CityCoordinates.forCity(city);
+        setRotationY(mTmpA, -coords[1]);
+        setRotationX(mTmpB, coords[0]);
+        multiplyInto(mTmpB, mTmpA, mRot);
+        mFocusedCityId = city.getId();
     }
 
     /**
@@ -427,10 +381,12 @@ public class TimezoneGlobeView extends View {
 
         final float cx = w / 2f;
         final float cy = h / 2f;
-        final float radius = Math.min(w, h) / 2f - dp(8f);
-        if (radius <= 0) {
+        final float baseRadius = Math.min(w, h) / 2f - dp(8f);
+        if (baseRadius <= 0) {
             return;
         }
+        final float radius = baseRadius * mZoom;
+        mEdgeSubdivisions = mZoom >= 2.5f ? 3 : (mZoom >= COUNTRY_BORDER_ZOOM ? 2 : 1);
 
         canvas.drawCircle(cx, cy, radius, mSpherePaint);
         drawGraticule(canvas, cx, cy, radius);
@@ -439,7 +395,10 @@ public class TimezoneGlobeView extends View {
         mSphereClipPath.reset();
         mSphereClipPath.addCircle(cx, cy, radius, Path.Direction.CW);
         canvas.clipPath(mSphereClipPath);
-        drawContinents(canvas, cx, cy, radius);
+        drawLand(canvas, cx, cy, radius);
+        if (mZoom >= COUNTRY_BORDER_ZOOM) {
+            drawCountryBorders(canvas, cx, cy, radius);
+        }
         drawNightSide(canvas, cx, cy, radius);
         canvas.restoreToCount(save);
 
@@ -615,47 +574,215 @@ public class TimezoneGlobeView extends View {
         canvas.drawPath(mNightPath, mNightPaint);
     }
 
-    private void drawContinents(Canvas canvas, float cx, float cy, float radius) {
-        for (float[][] continent : CONTINENTS) {
-            drawContinentRing(canvas, continent, cx, cy, radius);
+    private void drawLand(Canvas canvas, float cx, float cy, float radius) {
+        for (float[][] ring : mMapData.getLandRings()) {
+            drawPolygonRing(canvas, ring, cx, cy, radius, true);
+        }
+    }
+
+    private void drawCountryBorders(Canvas canvas, float cx, float cy, float radius) {
+        mCountryBorderPaint.setStrokeWidth(dp(Math.max(0.7f, 1.15f / mZoom)));
+        for (float[][] ring : mMapData.getCountryRings()) {
+            drawPolygonRing(canvas, ring, cx, cy, radius, false);
         }
     }
 
     /**
-     * Subdivides a lat/lon ring, clips it to the front hemisphere, and draws a closed fill.
-     * Clipping against the limb avoids torn/open paths that made continent pieces vanish while rotating.
+     * Draws a lat/lon ring by extracting contiguous front-facing chains and closing each
+     * along the silhouette arc. Avoids Sutherland–Hodgman overfill / triangle artifacts when
+     * large Natural Earth polygons cross the left/right limb during rotation.
      */
-    private void drawContinentRing(Canvas canvas, float[][] ring, float cx, float cy, float radius) {
-        if (ring.length < 3) {
+    private void drawPolygonRing(Canvas canvas, float[][] ring, float cx, float cy, float radius,
+                                 boolean filled) {
+        if (ring.length < 3 || isMostlyBackFacing(ring)) {
             return;
         }
 
-        final int inCount = buildSubdividedSphereRing(ring);
-        if (inCount < 3) {
+        final int n = buildSubdividedSphereRing(ring);
+        if (n < 3) {
             return;
         }
 
-        final int outCount = clipToFrontHemisphere(inCount);
-        if (outCount < 3) {
+        boolean allFront = true;
+        for (int i = 0; i < n; i++) {
+            if (mInZ[i] < 0f) {
+                allFront = false;
+                break;
+            }
+        }
+        if (allFront) {
+            mContinentPath.reset();
+            mContinentPath.moveTo(cx + mInX[0] * radius, cy - mInY[0] * radius);
+            for (int i = 1; i < n; i++) {
+                mContinentPath.lineTo(cx + mInX[i] * radius, cy - mInY[i] * radius);
+            }
+            mContinentPath.close();
+            strokeOrFill(canvas, filled);
             return;
         }
 
-        buildContinentPath(outCount, cx, cy, radius);
-        if (!mContinentPath.isEmpty()) {
+        if (mRunSeen.length < n) {
+            mRunSeen = new boolean[Math.max(n, mRunSeen.length * 2)];
+        }
+        java.util.Arrays.fill(mRunSeen, 0, n, false);
+
+        for (int i = 0; i < n; i++) {
+            if (mRunSeen[i] || mInZ[i] < 0f) {
+                continue;
+            }
+            final int prev = (i - 1 + n) % n;
+            if (mInZ[prev] >= 0f) {
+                continue; // not the start of a front run
+            }
+
+            int j = i;
+            float sumX = 0f;
+            float sumY = 0f;
+            int count = 0;
+            do {
+                mRunSeen[j] = true;
+                sumX += mInX[j];
+                sumY += mInY[j];
+                count++;
+                j = (j + 1) % n;
+            } while (j != i && mInZ[j] >= 0f);
+
+            final int end = (j - 1 + n) % n;
+            if (count < 2) {
+                continue;
+            }
+            drawFrontRun(canvas, i, end, n, sumX / count, sumY / count, cx, cy, radius, filled);
+        }
+    }
+
+    private void drawFrontRun(Canvas canvas, int start, int end, int n,
+                              float centX, float centY,
+                              float cx, float cy, float radius, boolean filled) {
+        final int prev = (start - 1 + n) % n;
+        final int next = (end + 1) % n;
+        final boolean hasEntry = mInZ[prev] < 0f;
+        final boolean hasExit = mInZ[next] < 0f;
+
+        mContinentPath.reset();
+
+        float pathStartX;
+        float pathStartY;
+        float pathEndX;
+        float pathEndY;
+
+        if (hasEntry) {
+            limbIntersection(mInX[prev], mInY[prev], mInZ[prev],
+                mInX[start], mInY[start], mInZ[start], mViewTmp);
+            pathStartX = mViewTmp[0];
+            pathStartY = mViewTmp[1];
+            mContinentPath.moveTo(cx + pathStartX * radius, cy - pathStartY * radius);
+        } else {
+            pathStartX = mInX[start];
+            pathStartY = mInY[start];
+            mContinentPath.moveTo(cx + pathStartX * radius, cy - pathStartY * radius);
+        }
+
+        int idx = start;
+        while (true) {
+            pathEndX = mInX[idx];
+            pathEndY = mInY[idx];
+            mContinentPath.lineTo(cx + pathEndX * radius, cy - pathEndY * radius);
+            if (idx == end) {
+                break;
+            }
+            idx = (idx + 1) % n;
+        }
+
+        if (hasExit) {
+            limbIntersection(mInX[end], mInY[end], mInZ[end],
+                mInX[next], mInY[next], mInZ[next], mViewTmp);
+            pathEndX = mViewTmp[0];
+            pathEndY = mViewTmp[1];
+            mContinentPath.lineTo(cx + pathEndX * radius, cy - pathEndY * radius);
+        }
+
+        if (filled && (hasEntry || hasExit)) {
+            appendLimbArcToward(pathEndX, pathEndY, pathStartX, pathStartY,
+                centX, centY, cx, cy, radius);
+            mContinentPath.close();
+            strokeOrFill(canvas, true);
+        } else if (filled) {
+            mContinentPath.close();
+            strokeOrFill(canvas, true);
+        } else {
+            strokeOrFill(canvas, false);
+        }
+    }
+
+    private void strokeOrFill(Canvas canvas, boolean filled) {
+        if (mContinentPath.isEmpty()) {
+            return;
+        }
+        if (filled) {
             canvas.drawPath(mContinentPath, mContinentFillPaint);
             canvas.drawPath(mContinentPath, mContinentStrokePaint);
+        } else {
+            canvas.drawPath(mContinentPath, mCountryBorderPaint);
         }
+    }
+
+    /**
+     * Connects two silhouette points along the limb arc whose midpoint lies closer to the
+     * visible land centroid — prevents half-disk overfill from choosing the long way around.
+     */
+    private void appendLimbArcToward(float x0, float y0, float x1, float y1,
+                                     float centX, float centY,
+                                     float cx, float cy, float radius) {
+        final float a0 = (float) Math.atan2(y0, x0);
+        final float a1 = (float) Math.atan2(y1, x1);
+        float deltaCcw = a1 - a0;
+        while (deltaCcw <= 0f) {
+            deltaCcw += (float) (2.0 * Math.PI);
+        }
+        final float deltaCw = deltaCcw - (float) (2.0 * Math.PI);
+
+        final float midCcw = a0 + deltaCcw * 0.5f;
+        final float midCw = a0 + deltaCw * 0.5f;
+        final float distCcw = (float) Math.hypot(Math.cos(midCcw) - centX, Math.sin(midCcw) - centY);
+        final float distCw = (float) Math.hypot(Math.cos(midCw) - centX, Math.sin(midCw) - centY);
+        final float delta = distCcw <= distCw ? deltaCcw : deltaCw;
+
+        if (Math.abs(delta) < 1e-4f) {
+            mContinentPath.lineTo(cx + x1 * radius, cy - y1 * radius);
+            return;
+        }
+
+        final int steps = Math.max(1, Math.round(Math.abs(delta) / ((float) Math.PI / 36f)));
+        for (int s = 1; s <= steps; s++) {
+            final float a = a0 + delta * (s / (float) steps);
+            mContinentPath.lineTo(
+                cx + (float) Math.cos(a) * radius,
+                cy - (float) Math.sin(a) * radius);
+        }
+    }
+
+    /** Quick reject for rings entirely on the far side of the globe. */
+    private boolean isMostlyBackFacing(float[][] ring) {
+        final int step = Math.max(1, ring.length / 10);
+        for (int i = 0; i < ring.length; i += step) {
+            latLonToView(ring[i][0], ring[i][1], mViewTmp);
+            if (mViewTmp[2] >= -0.08f) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
      * Fills {@link #mInX}/{@link #mInY}/{@link #mInZ} with unit-sphere samples along {@code ring}.
      *
-     * @return number of points written (ring is open; last equals first is skipped)
+     * @return number of points written
      */
     private int buildSubdividedSphereRing(float[][] ring) {
         int count = 0;
         final int edgeCount = ring.length - 1;
-        final int estimated = edgeCount * EDGE_SUBDIVISIONS + 1;
+        final int subdivisions = Math.max(1, mEdgeSubdivisions);
+        final int estimated = edgeCount * subdivisions + 1;
         ensureClipCapacity(estimated);
 
         for (int i = 0; i < edgeCount; i++) {
@@ -671,14 +798,13 @@ public class TimezoneGlobeView extends View {
                 lonDelta += 360f;
             }
 
-            for (int s = 0; s < EDGE_SUBDIVISIONS; s++) {
-                final float t = s / (float) EDGE_SUBDIVISIONS;
+            for (int s = 0; s < subdivisions; s++) {
+                final float t = s / (float) subdivisions;
                 final float lat = lat0 + (lat1 - lat0) * t;
                 final float lon = lon0 + lonDelta * t;
                 count = appendSpherePoint(count, lat, lon);
             }
         }
-        // Close sample for clipping (last vertex of ring, usually equals first).
         count = appendSpherePoint(count, ring[ring.length - 1][0], ring[ring.length - 1][1]);
         return count;
     }
@@ -704,75 +830,21 @@ public class TimezoneGlobeView extends View {
         return count + 1;
     }
 
-    /**
-     * Sutherland–Hodgman clip of the unit-sphere polygon to depth {@code z >= 0}.
-     *
-     * @return number of points in the output buffers
-     */
-    private int clipToFrontHemisphere(int inCount) {
-        if (inCount < 3) {
-            return 0;
-        }
-        ensureClipCapacity(inCount * 2);
-
-        int outCount = 0;
-        float prevX = mInX[inCount - 1];
-        float prevY = mInY[inCount - 1];
-        float prevZ = mInZ[inCount - 1];
-        boolean prevInside = prevZ >= 0f;
-
-        for (int i = 0; i < inCount; i++) {
-            final float currX = mInX[i];
-            final float currY = mInY[i];
-            final float currZ = mInZ[i];
-            final boolean currInside = currZ >= 0f;
-
-            if (currInside != prevInside) {
-                outCount = appendIntersection(outCount, prevX, prevY, prevZ, currX, currY, currZ);
-            }
-            if (currInside) {
-                ensureClipCapacity(outCount + 1);
-                mOutX[outCount] = currX;
-                mOutY[outCount] = currY;
-                mOutZ[outCount] = currZ;
-                outCount++;
-            }
-
-            prevX = currX;
-            prevY = currY;
-            prevZ = currZ;
-            prevInside = currInside;
-        }
-        return outCount;
-    }
-
-    private int appendIntersection(int outCount, float ax, float ay, float az,
-                                   float bx, float by, float bz) {
+    private static void limbIntersection(float ax, float ay, float az,
+                                         float bx, float by, float bz,
+                                         float[] out) {
         final float denom = az - bz;
         final float t = Math.abs(denom) < 1e-8f ? 0.5f : az / denom;
         float x = ax + t * (bx - ax);
         float y = ay + t * (by - ay);
-        // Snap onto the silhouette circle so limb edges stay on the globe outline.
         final float len = (float) Math.hypot(x, y);
         if (len > 1e-6f) {
             x /= len;
             y /= len;
         }
-        ensureClipCapacity(outCount + 1);
-        mOutX[outCount] = x;
-        mOutY[outCount] = y;
-        mOutZ[outCount] = 0f;
-        return outCount + 1;
-    }
-
-    private void buildContinentPath(int count, float cx, float cy, float radius) {
-        mContinentPath.reset();
-        final float scale = radius * 0.92f;
-        mContinentPath.moveTo(cx + mOutX[0] * scale, cy - mOutY[0] * scale);
-        for (int i = 1; i < count; i++) {
-            mContinentPath.lineTo(cx + mOutX[i] * scale, cy - mOutY[i] * scale);
-        }
-        mContinentPath.close();
+        out[0] = x;
+        out[1] = y;
+        out[2] = 0f;
     }
 
     private void ensureClipCapacity(int needed) {
@@ -812,8 +884,8 @@ public class TimezoneGlobeView extends View {
             return null;
         }
 
-        final float px = cx + x * radius * 0.92f;
-        final float py = cy - y * radius * 0.92f;
+        final float px = cx + x * radius;
+        final float py = cy - y * radius;
         if (allowBack) {
             return new float[]{px, py, depth};
         }
@@ -849,7 +921,7 @@ public class TimezoneGlobeView extends View {
         }
         final float cx = w / 2f;
         final float cy = h / 2f;
-        final float radius = Math.min(w, h) / 2f - dp(8f);
+        final float radius = (Math.min(w, h) / 2f - dp(8f)) * mZoom;
         final float hitR = dp(HIT_RADIUS_DP);
 
         City best = null;
@@ -874,7 +946,22 @@ public class TimezoneGlobeView extends View {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        switch (event.getActionMasked()) {
+        mScaleDetector.onTouchEvent(event);
+        final int action = event.getActionMasked();
+
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+            mScaling = false;
+        }
+
+        // Pinch / multi-touch: zoom only (scale detector already handled).
+        if (mScaling || event.getPointerCount() > 1) {
+            if (getParent() != null) {
+                getParent().requestDisallowInterceptTouchEvent(true);
+            }
+            return true;
+        }
+
+        switch (action) {
             case MotionEvent.ACTION_DOWN -> {
                 mLastTouchX = event.getX();
                 mLastTouchY = event.getY();
@@ -934,10 +1021,12 @@ public class TimezoneGlobeView extends View {
      * Trackball-style rotation: horizontal drag spins around view-Y, vertical around view-X.
      * Screen Y grows downward; a downward drag must apply a positive view-X rotation so the
      * grabbed surface follows the finger (projection uses {@code cy - y}).
+     * Sensitivity decreases when zoomed in for finer control.
      */
     private void applyTrackballDrag(float dxPx, float dyPx) {
-        setRotationY(mTmpA, dxPx * DRAG_DEG_PER_PX);
-        setRotationX(mTmpB, dyPx * DRAG_DEG_PER_PX);
+        final float sens = DRAG_DEG_PER_PX / mZoom;
+        setRotationY(mTmpA, dxPx * sens);
+        setRotationX(mTmpB, dyPx * sens);
         // delta = Rx · Ry, then R = delta · R
         multiplyInto(mTmpB, mTmpA, mAnimFrom);
         multiplyInto(mAnimFrom, mRot, mTmpB);
@@ -1049,6 +1138,10 @@ public class TimezoneGlobeView extends View {
             d += 360f;
         }
         return d;
+    }
+
+    private static float clamp(float value, float min, float max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private float dp(float value) {
