@@ -837,6 +837,8 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
      * <p>
      * The behavior depends on user settings and the current alarm state:</p>
      * <ul>
+     *      <li>Recurring (weekday or interval) alarms always show a skip-to-next button when
+     *          enabled or snoozed.</li>
      *      <li>If the dismiss button is configured to be shown when the alarm is enabled,
      *          the method returns {@code true} if the alarm is enabled or currently snoozed.</li>
      *      <li>Otherwise, it returns true only if the alarm is in SNOOZE_STATE or NOTIFICATION_STATE.</li>
@@ -846,6 +848,9 @@ public final class Alarm implements Parcelable, ClockContract.AlarmsColumns {
      * @return {@code true} if the alarm can show a preemptive dismiss button; {@code false} otherwise.
      */
     public boolean canPreemptivelyDismiss(Context context) {
+        if (isRecurring() && (enabled || instanceState == AlarmInstance.SNOOZE_STATE)) {
+            return true;
+        }
         if (SettingsDAO.isDismissButtonDisplayedWhenAlarmEnabled(getDefaultSharedPreferences(context))) {
             return enabled || instanceState == AlarmInstance.SNOOZE_STATE;
         } else {

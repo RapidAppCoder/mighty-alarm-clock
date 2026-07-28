@@ -276,8 +276,9 @@ public final class AlarmStateManager extends BroadcastReceiver {
         } else {
             AlarmInstance nextRepeatedInstance;
 
-            if (SettingsDAO.isDismissButtonDisplayedWhenAlarmEnabled(getDefaultSharedPreferences(context))) {
-                // If the Dismiss button is permanently displayed, create the next instance only from the current instance.
+            if (SettingsDAO.isDismissButtonDisplayedWhenAlarmEnabled(getDefaultSharedPreferences(context))
+                || instance.mAlarmState == AlarmInstance.PREDISMISSED_STATE) {
+                // Skip-to-next / permanent dismiss button: schedule strictly after this instance.
                 nextRepeatedInstance = alarm.createInstanceAfter(instance.getAlarmTime());
             } else {
                 // Schedule the next repeating instance which may be before the current instance if a

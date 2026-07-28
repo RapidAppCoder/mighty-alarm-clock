@@ -205,16 +205,19 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
 
     @Override
     public void onDestroyView() {
-        nullifyClickListeners(mBinding.digitalClock, mBinding.scheduleAlarmLayout, mBinding.pauseAlarmLayout, mBinding.editLabel,
-            mBinding.chooseRingtone, mBinding.vibrationPatternLayout, mBinding.autoSilenceDurationLayout, mBinding.snoozeDurationLayout,
-            mBinding.missedAlarmRepeatLimitLayout, mBinding.crescendoDurationLayout, mBinding.alarmVolumeLayout, mBinding.deleteButton,
-            mBinding.duplicateButton);
+        if (mBinding != null) {
+            nullifyClickListeners(mBinding.digitalClock, mBinding.scheduleAlarmLayout, mBinding.pauseAlarmLayout, mBinding.editLabel,
+                mBinding.chooseRingtone, mBinding.vibrationPatternLayout, mBinding.autoSilenceDurationLayout, mBinding.snoozeDurationLayout,
+                mBinding.missedAlarmRepeatLimitLayout, mBinding.crescendoDurationLayout, mBinding.alarmVolumeLayout, mBinding.deleteButton,
+                mBinding.duplicateButton);
+        }
+
+        // DialogFragment.onDestroyView() invokes onDismiss(), which may call saveAlarmSettings().
+        // Keep the update handler until after that so dismiss-time persistence does not NPE.
+        super.onDestroyView();
 
         mAlarmUpdateHandler = null;
-
         mBinding = null;
-
-        super.onDestroyView();
     }
 
     @Override
@@ -1808,7 +1811,7 @@ public class AlarmEditBottomSheetFragment extends BottomSheetDialogFragment {
     }
 
     private void saveAlarmSettings() {
-        if (mIsDeleted || mAlarm == null || mOriginalAlarm == null) {
+        if (mIsDeleted || mAlarm == null || mOriginalAlarm == null || mAlarmUpdateHandler == null) {
             return;
         }
 

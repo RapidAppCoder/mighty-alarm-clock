@@ -328,12 +328,65 @@ public class AlarmItemViewHolder extends RecyclerView.ViewHolder {
             return;
         }
 
-        final String dismissText = alarm.isDeleteAfterUse()
-            ? context.getString(R.string.alarm_alert_dismiss_and_delete_text_button)
-            : context.getString(R.string.alarm_alert_dismiss_text);
-
+        final String dismissText = formatPreemptiveDismissLabel(context, alarm, alarmInstance);
         mBinding.preemptiveDismissButton.setText(dismissText);
+        if (alarm.isRecurring() && !alarm.isDeleteAfterUse()) {
+            mBinding.preemptiveDismissButton.setContentDescription(
+                context.getString(R.string.mighty_skip_next_occurrence_content_description, dismissText));
+        } else {
+            mBinding.preemptiveDismissButton.setContentDescription(dismissText);
+        }
         mBinding.preemptiveDismissButton.setVisibility(VISIBLE);
+    }
+
+    /**
+     * Label for the preemptive dismiss / skip-to-next control.
+     * Recurring alarms show how far ahead the occurrence after the skipped one is (e.g. "+2d").
+     */
+    private static String formatPreemptiveDismissLabel(Context context, Alarm alarm,
+                                                       AlarmInstance alarmInstance) {
+        if (alarm.isDeleteAfterUse()) {
+            return context.getString(R.string.alarm_alert_dismiss_and_delete_text_button);
+        }
+        if (!alarm.isRecurring()) {
+            return context.getString(R.string.alarm_alert_dismiss_text);
+        }
+
+        final Calendar currentOccurrence = alarmInstance.getAlarmTime();
+        final Calendar nextOccurrence = alarm.getNextAlarmTime(currentOccurrence);
+        final long diffMs = nextOccurrence.getTimeInMillis() - currentOccurrence.getTimeInMillis();
+        if (diffMs <= 0) {
+            return context.getString(R.string.alarm_alert_dismiss_text);
+        }
+
+        final int days = calendarDaysBetween(currentOccurrence, nextOccurrence);
+        if (days >= 1) {
+            return context.getString(R.string.mighty_skip_next_occurrence_days, days);
+        }
+
+        final long hours = TimeUnit.MILLISECONDS.toHours(diffMs);
+        if (hours >= 1) {
+            return context.getString(R.string.mighty_skip_next_occurrence_hours, hours);
+        }
+
+        final long minutes = Math.max(1, TimeUnit.MILLISECONDS.toMinutes(diffMs));
+        return context.getString(R.string.mighty_skip_next_occurrence_minutes, minutes);
+    }
+
+    private static int calendarDaysBetween(Calendar from, Calendar to) {
+        final Calendar start = (Calendar) from.clone();
+        start.set(Calendar.HOUR_OF_DAY, 0);
+        start.set(Calendar.MINUTE, 0);
+        start.set(Calendar.SECOND, 0);
+        start.set(Calendar.MILLISECOND, 0);
+
+        final Calendar end = (Calendar) to.clone();
+        end.set(Calendar.HOUR_OF_DAY, 0);
+        end.set(Calendar.MINUTE, 0);
+        end.set(Calendar.SECOND, 0);
+        end.set(Calendar.MILLISECOND, 0);
+
+        return (int) TimeUnit.MILLISECONDS.toDays(end.getTimeInMillis() - start.getTimeInMillis());
     }
 
     private void bindAlphaAnimation(Alarm alarm) {

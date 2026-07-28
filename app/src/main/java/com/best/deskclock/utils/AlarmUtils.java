@@ -79,7 +79,7 @@ public class AlarmUtils {
         final String text;
         if (alarm.isDeleteAfterUse()) {
             text = localizedContext.getString(R.string.alarm_is_dismissed_and_deleted, time);
-        } else if (alarm.daysOfWeek.isRepeating()) {
+        } else if (alarm.daysOfWeek.isRepeating() || alarm.isIntervalRepeating()) {
             text = localizedContext.getString(R.string.repetitive_alarm_is_dismissed, date);
         } else {
             text = localizedContext.getString(R.string.alarm_is_dismissed, time);

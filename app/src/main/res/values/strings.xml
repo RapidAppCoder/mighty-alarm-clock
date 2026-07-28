@@ -1662,8 +1662,12 @@
     <!-- %1$s = start date, %2$s = interval summary -->
     <string name="mighty_interval_summary_with_date">%1$s · %2$s</string>
 
-
-
+    <!-- Skip current occurrence of a recurring alarm; %1$d = days/hours/minutes until the one after -->
+    <string name="mighty_skip_next_occurrence_days">+%1$dd</string>
+    <string name="mighty_skip_next_occurrence_hours">+%1$dh</string>
+    <string name="mighty_skip_next_occurrence_minutes">+%1$dm</string>
+    <!-- %1$s = short label such as "+2d" -->
+    <string name="mighty_skip_next_occurrence_content_description">Skip this ringing and schedule the next one (%1$s)</string>
 
     <!-- Sample alarms / tags seeded on first launch -->
     <string name="mighty_sample_tag_work">Work</string>
