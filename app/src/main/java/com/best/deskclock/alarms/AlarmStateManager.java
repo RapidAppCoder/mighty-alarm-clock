@@ -543,6 +543,45 @@ public final class AlarmStateManager extends BroadcastReceiver {
     }
 
     /**
+     * Reschedules an already-snoozed alarm to fire {@code hoursFromNow} hours from now,
+     * without changing the snooze count or progressive-snooze progression.
+     */
+    public static void postponeSnooze(final Context context, AlarmInstance instance, int hoursFromNow) {
+        if (instance == null || hoursFromNow < 1) {
+            return;
+        }
+
+        final ContentResolver contentResolver = context.getContentResolver();
+        cancelScheduledInstanceStateChange(context, instance);
+
+        final Calendar newAlarmTime = Calendar.getInstance();
+        newAlarmTime.add(Calendar.HOUR_OF_DAY, hoursFromNow);
+
+        LogUtils.i("Postponing snoozed instance " + instance.mId + " by " + hoursFromNow
+            + "h to " + AlarmUtils.getFormattedTime(context, newAlarmTime));
+        instance.setAlarmTime(newAlarmTime);
+        instance.mAlarmState = AlarmInstance.SNOOZE_STATE;
+        instance.updateInstance(contentResolver);
+
+        AlarmNotifications.showSnoozeNotification(context, instance);
+        scheduleInstanceStateChange(context, instance.getAlarmTime(), instance, AlarmInstance.FIRED_STATE);
+
+        final int minutes = hoursFromNow * 60;
+        AppExecutors.getMainThread().post(() -> {
+            String displayTime = String.format(
+                context.getResources().getQuantityText(R.plurals.alarm_alert_snooze_set, minutes).toString(),
+                minutes);
+            if (DataModel.getDataModel().isApplicationInForeground()) {
+                CustomToast.showLong(context, displayTime);
+            } else {
+                Toast.makeText(context, displayTime, Toast.LENGTH_LONG).show();
+            }
+        });
+
+        updateNextAlarm(context);
+    }
+
+    /**
      * Computes the snooze duration (in minutes) that would apply the next time the given instance
      * is snoozed, taking progressive snooze extension into account. Useful for UI that wants to
      * preview the upcoming snooze duration (e.g. a snooze button label).

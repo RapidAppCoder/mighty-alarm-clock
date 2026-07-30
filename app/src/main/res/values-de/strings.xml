@@ -840,6 +840,7 @@
     <string name="mighty_skip_next_occurrence_hours">+%1$dh</string>
     <string name="mighty_skip_next_occurrence_minutes">+%1$dm</string>
     <string name="mighty_skip_next_occurrence_content_description">Diesen Klingeltermin überspringen und den nächsten planen (%1$s)</string>
+    <string name="mighty_postpone_snooze_content_description">Schlummer um %1$d Stunden ab jetzt verschieben</string>
 
     <string name="mighty_sample_tag_work">Arbeit</string>
     <string name="mighty_sample_tag_home">Zuhause</string>

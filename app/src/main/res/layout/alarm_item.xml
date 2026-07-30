@@ -86,7 +86,7 @@
         android:textSize="14sp"
         android:maxLines="2"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/preemptive_dismiss_button"
+        app:layout_constraintEnd_toStartOf="@+id/preemptive_actions"
         app:layout_constraintTop_toBottomOf="@+id/clock_tags_barrier"
         app:layout_constraintBottom_toTopOf="@+id/upcoming_date"
         app:layout_constrainedWidth="true"
@@ -103,7 +103,7 @@
         android:textColor="?attr/colorTertiary"
         android:maxLines="1"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/preemptive_dismiss_button"
+        app:layout_constraintEnd_toStartOf="@+id/preemptive_actions"
         app:layout_constraintTop_toBottomOf="@+id/days_of_week"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constrainedWidth="true"
@@ -119,29 +119,67 @@
         app:thumbIconTint="@color/switch_thumb_icon_tint"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/preemptive_dismiss_button"
+        app:layout_constraintBottom_toTopOf="@id/preemptive_actions"
         app:layout_constraintVertical_chainStyle="packed"
         tools:thumbIcon="@drawable/alarm_switch_thumb_icon"
         tools:ignore="TouchTargetSizeCheck" />
 
-    <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/preemptive_dismiss_button"
+    <LinearLayout
+        android:id="@+id/preemptive_actions"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
-        android:layout_marginTop="16dp"
-        android:minHeight="40dp"
-        android:padding="10dp"
-        android:includeFontPadding="false"
-        android:gravity="center"
-        android:maxLines="2"
-        android:textColor="?attr/colorAccent"
-        android:textStyle="bold"
+        android:layout_marginTop="8dp"
+        android:gravity="end|center_vertical"
+        android:orientation="horizontal"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/on_off_button"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constrainedWidth="true"
-        app:layout_constraintHorizontal_bias="1.0"
-        tools:text="@string/alarm_alert_dismiss_and_delete_text_button" />
+        app:layout_constraintHorizontal_bias="1.0">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/postpone_1h_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="40dp"
+            android:padding="10dp"
+            android:includeFontPadding="false"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textColor="?attr/colorAccent"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:text="+1h"
+            tools:visibility="visible" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/postpone_2h_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="40dp"
+            android:padding="10dp"
+            android:includeFontPadding="false"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textColor="?attr/colorAccent"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:text="+2h"
+            tools:visibility="visible" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/preemptive_dismiss_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="40dp"
+            android:padding="10dp"
+            android:includeFontPadding="false"
+            android:gravity="center"
+            android:maxLines="2"
+            android:textColor="?attr/colorAccent"
+            android:textStyle="bold"
+            tools:text="@string/alarm_alert_dismiss_and_delete_text_button" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

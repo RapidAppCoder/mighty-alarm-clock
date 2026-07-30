@@ -215,6 +215,16 @@ public final class AlarmTimeClickHandler {
         mContext.startService(dismissIntent);
     }
 
+    /**
+     * Postpones a snoozed alarm so it rings again {@code hoursFromNow} hours from now.
+     */
+    public void postponeSnoozedAlarm(AlarmInstance alarmInstance, int hoursFromNow) {
+        if (alarmInstance == null || hoursFromNow < 1) {
+            return;
+        }
+        AlarmStateManager.postponeSnooze(mContext, alarmInstance, hoursFromNow);
+    }
+
     public void onClockClicked(Alarm alarm) {
         mSelectedAlarm = alarm;
 

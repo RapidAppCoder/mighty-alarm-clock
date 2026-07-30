@@ -1668,6 +1668,8 @@
     <string name="mighty_skip_next_occurrence_minutes">+%1$dm</string>
     <!-- %1$s = short label such as "+2d" -->
     <string name="mighty_skip_next_occurrence_content_description">Skip this ringing and schedule the next one (%1$s)</string>
+    <!-- Postpone a snoozed alarm from now; %1$d = hours -->
+    <string name="mighty_postpone_snooze_content_description">Postpone snooze by %1$d hours from now</string>
 
     <!-- Sample alarms / tags seeded on first launch -->
     <string name="mighty_sample_tag_work">Work</string>

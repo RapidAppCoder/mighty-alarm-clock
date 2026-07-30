@@ -17,6 +17,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.text.format.DateFormat;
 import android.util.TypedValue;
+import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.core.view.HapticFeedbackConstantsCompat;
@@ -98,7 +99,7 @@ public class AlarmItemViewHolder extends RecyclerView.ViewHolder {
         // Upcoming date font
         mBinding.upcomingDate.setTypeface(mGeneralTypeface);
 
-        // Preemptive dismiss button handler
+        // Preemptive dismiss / postpone buttons
         mBinding.preemptiveDismissButton.setBackground(ThemeUtils.pillRippleDrawable(context, Color.TRANSPARENT));
         mBinding.preemptiveDismissButton.setTypeface(mGeneralBoldTypeface);
         mBinding.preemptiveDismissButton.setOnClickListener(v -> {
@@ -108,6 +109,23 @@ public class AlarmItemViewHolder extends RecyclerView.ViewHolder {
                 mItemHolder.getAlarmTimeClickHandler().dismissAlarmInstance(mItemHolder, alarmInstance);
             }
         });
+
+        mBinding.postpone1hButton.setBackground(ThemeUtils.pillRippleDrawable(context, Color.TRANSPARENT));
+        mBinding.postpone1hButton.setTypeface(mGeneralBoldTypeface);
+        mBinding.postpone1hButton.setOnClickListener(v -> onPostponeSnoozeClicked(v, 1));
+
+        mBinding.postpone2hButton.setBackground(ThemeUtils.pillRippleDrawable(context, Color.TRANSPARENT));
+        mBinding.postpone2hButton.setTypeface(mGeneralBoldTypeface);
+        mBinding.postpone2hButton.setOnClickListener(v -> onPostponeSnoozeClicked(v, 2));
+    }
+
+    private void onPostponeSnoozeClicked(View v, int hours) {
+        final AlarmInstance alarmInstance = mItemHolder.getAlarmInstance();
+        if (alarmInstance == null) {
+            return;
+        }
+        Utils.performHapticFeedback(v, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
+        mItemHolder.getAlarmTimeClickHandler().postponeSnoozedAlarm(alarmInstance, hours);
     }
 
     public AlarmItemHolder getItemHolder() {
@@ -316,14 +334,37 @@ public class AlarmItemViewHolder extends RecyclerView.ViewHolder {
     }
 
     private void bindPreemptiveDismissButton(Context context, Alarm alarm, AlarmInstance alarmInstance) {
-        if (AlarmVisualCache.isDismissed(alarm.id)) {
-            mBinding.preemptiveDismissButton.setVisibility(GONE);
+        final boolean isSnoozed = alarmInstance != null && alarm.instanceState == AlarmInstance.SNOOZE_STATE;
+        final boolean hideDismiss = AlarmVisualCache.isDismissed(alarm.id);
+        final boolean canBindDismiss = !hideDismiss
+            && alarm.canPreemptivelyDismiss(context)
+            && alarmInstance != null;
+
+        if (!canBindDismiss && !isSnoozed) {
+            mBinding.preemptiveActions.setVisibility(GONE);
             return;
         }
 
-        final boolean canBind = alarm.canPreemptivelyDismiss(context) && alarmInstance != null;
+        mBinding.preemptiveActions.setVisibility(VISIBLE);
 
-        if (!canBind) {
+        if (isSnoozed) {
+            final String label1h = context.getString(R.string.mighty_skip_next_occurrence_hours, 1);
+            final String label2h = context.getString(R.string.mighty_skip_next_occurrence_hours, 2);
+            mBinding.postpone1hButton.setText(label1h);
+            mBinding.postpone1hButton.setContentDescription(
+                context.getString(R.string.mighty_postpone_snooze_content_description, 1));
+            mBinding.postpone1hButton.setVisibility(VISIBLE);
+
+            mBinding.postpone2hButton.setText(label2h);
+            mBinding.postpone2hButton.setContentDescription(
+                context.getString(R.string.mighty_postpone_snooze_content_description, 2));
+            mBinding.postpone2hButton.setVisibility(VISIBLE);
+        } else {
+            mBinding.postpone1hButton.setVisibility(GONE);
+            mBinding.postpone2hButton.setVisibility(GONE);
+        }
+
+        if (!canBindDismiss) {
             mBinding.preemptiveDismissButton.setVisibility(GONE);
             return;
         }
