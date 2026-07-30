@@ -14,6 +14,9 @@ public class PreferencesKeys {
     /** True after the default world-clock city (Ebermannsdorf) has been offered once. */
     public static final String KEY_DEFAULT_WORLD_CITY_SEEDED = "key_default_world_city_seeded";
 
+    /** True after flip-to-snooze was applied as the new default for existing installs. */
+    public static final String KEY_FLIP_SNOOZE_DEFAULT_APPLIED = "key_flip_snooze_default_applied";
+
     // **************
     // ** SETTINGS **
     // **************

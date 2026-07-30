@@ -113,7 +113,7 @@ public class PreferencesDefaultValues {
     public static final String POWER_BEHAVIOR_SNOOZE = "1";
     public static final String POWER_BEHAVIOR_DISMISS = "2";
     public static final String POWER_BEHAVIOR_DISABLE = "3";
-    public static final String DEFAULT_FLIP_ACTION = "0";
+    public static final String DEFAULT_FLIP_ACTION = "1";
     public static final String DEFAULT_SHAKE_ACTION = "0";
     public static final int DEFAULT_SHAKE_INTENSITY = 16;
     public static final String DEFAULT_SORT_BY_ALARM_TIME = "0";

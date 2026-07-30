@@ -8,11 +8,14 @@ package com.best.deskclock;
 
 import static com.best.deskclock.settings.PreferencesDefaultValues.DARK_THEME;
 import static com.best.deskclock.settings.PreferencesDefaultValues.DEBUG_LANGUAGE_CODE;
+import static com.best.deskclock.settings.PreferencesDefaultValues.DEFAULT_FLIP_ACTION;
 import static com.best.deskclock.settings.PreferencesDefaultValues.LIGHT_THEME;
 import static com.best.deskclock.settings.PreferencesDefaultValues.PURPLE_ACCENT_COLOR;
 import static com.best.deskclock.settings.PreferencesDefaultValues.RED_ACCENT_COLOR;
 import static com.best.deskclock.settings.PreferencesDefaultValues.SYSTEM_THEME;
 import static com.best.deskclock.settings.PreferencesKeys.KEY_ACCENT_COLOR;
+import static com.best.deskclock.settings.PreferencesKeys.KEY_FLIP_ACTION;
+import static com.best.deskclock.settings.PreferencesKeys.KEY_FLIP_SNOOZE_DEFAULT_APPLIED;
 import static com.best.deskclock.settings.PreferencesKeys.KEY_LANGUAGE_CODE;
 
 import android.app.Activity;
@@ -58,6 +61,7 @@ public class DeskClockApplication extends Application implements Application.Act
         sInstance = this;
 
         initDebugAndNightlyDefaults();
+        migrateFlipActionDefaultToSnooze();
 
         String theme = SettingsDAO.getTheme(getDefaultSharedPreferences(this));
         applySystemNightMode(theme);
@@ -132,6 +136,24 @@ public class DeskClockApplication extends Application implements Application.Act
     @Override public void onActivityPaused(@NonNull Activity activity) {}
     @Override public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {}
     @Override public void onActivityDestroyed(@NonNull Activity activity) {}
+
+    /**
+     * Existing installs kept the previous default "nothing" for flip. Upgrade once to snooze
+     * when the preference is still unset or still "0"; leave dismiss/disable choices alone.
+     */
+    private void migrateFlipActionDefaultToSnooze() {
+        SharedPreferences prefs = getDefaultSharedPreferences(this);
+        if (prefs.getBoolean(KEY_FLIP_SNOOZE_DEFAULT_APPLIED, false)) {
+            return;
+        }
+
+        SharedPreferences.Editor editor = prefs.edit();
+        final String current = prefs.getString(KEY_FLIP_ACTION, null);
+        if (current == null || "0".equals(current)) {
+            editor.putString(KEY_FLIP_ACTION, DEFAULT_FLIP_ACTION);
+        }
+        editor.putBoolean(KEY_FLIP_SNOOZE_DEFAULT_APPLIED, true).apply();
+    }
 
     private void initDebugAndNightlyDefaults() {
         SharedPreferences prefs = getDefaultSharedPreferences(this);

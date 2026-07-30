@@ -257,7 +257,7 @@
             android:title="@string/flip_action_title"
             android:entries="@array/action_setting_entries"
             android:entryValues="@array/side_button_setting_values"
-            android:defaultValue="0"
+            android:defaultValue="1"
             app:iconSpaceReserved="false"
             app:singleLineTitle="false" />
 
