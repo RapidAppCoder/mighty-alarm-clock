@@ -16,8 +16,8 @@ RepoType: git
 Repo: https://github.com/REPLACE_ME/mighty-alarm-clock
 
 Builds:
-  - versionName: 1.0.0
-    versionCode: 10000
+  - versionName: 2026.08.001
+    versionCode: 202608001
     commit: REPLACE_WITH_TAG_OR_COMMIT
     subdir: app
     gradle:
@@ -25,5 +25,5 @@ Builds:
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 1.0.0
-CurrentVersionCode: 10000
+CurrentVersion: 2026.08.001
+CurrentVersionCode: 202608001
