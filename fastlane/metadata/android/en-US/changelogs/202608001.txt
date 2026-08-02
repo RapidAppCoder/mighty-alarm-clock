@@ -1,0 +1,7 @@
+First public CalVer release (2026.08.001) of AlarmClock Deluxe.
+
+Fork of BlackyHawky's Clock with richer alarm management: fire queue,
+progressive snooze, global mute, tags, search/filters, Wi-Fi rules,
+JSON backups, Syncthing-friendly exchange, multi-stopwatch, timezone
+globe, and more. Location permission is used only to read the Wi-Fi SSID
+for optional rules — no internet access.

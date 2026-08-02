@@ -1,8 +1,12 @@
-AlarmClock Deluxe (Wecker, Uhr, Timer, Stoppuhr) (de.huttersoft.mightyalarmclock) is a fork of
-BlackyHawky's Clock, itself based on AOSP, released under the GNU General Public License v3.0
-(GPL-3.0).
+AlarmClock Deluxe (Wecker, Uhr, Timer, Stoppuhr) (de.huttersoft.mightyalarmclock)
+is a fork of BlackyHawky's Clock, itself based on AOSP, released under the GNU
+General Public License v3.0 (GPL-3.0).
 
 Does not use the internet permission, and thus is 100% offline.
+
+The location permission is used only to read the SSID of the connected Wi-Fi
+network for optional per-alarm Wi-Fi rules. No location data is collected or
+sent; the app cannot access the internet.
 
 On top of everything the original Clock app offers, AlarmClock Deluxe adds:
 <ul>
@@ -16,6 +20,7 @@ On top of everything the original Clock app offers, AlarmClock Deluxe adds:
   <li>Wi-Fi based rules to automatically enable/disable alarms depending on the connected network;</li>
   <li>Plain JSON backups (no ZIP) to a folder of your choice, with optional scheduled backups;</li>
   <li>An experimental "exchange" mechanism to move or share alarms between devices via a shared folder;</li>
+  <li>Multiple named stopwatches that can run in parallel, with runs recorded in the event log;</li>
   <li>A small rotatable timezone globe on the clock screen showing your selected world cities;</li>
 </ul>
 

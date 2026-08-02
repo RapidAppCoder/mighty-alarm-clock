@@ -1,1 +1,1 @@
-A mighty alarm, clock, timer and stopwatch app
+Alarm, clock, timer and stopwatch with advanced alarm tools

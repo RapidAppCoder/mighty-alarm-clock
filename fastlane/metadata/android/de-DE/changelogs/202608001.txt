@@ -1,0 +1,8 @@
+Erste öffentliche CalVer-Version (2026.08.001) von AlarmClock Deluxe.
+
+Fork von BlackyHawkys Clock mit erweitertem Wecker-Management:
+Klingel-Warteschlange, progressives Schlummern, globaler Stumm-Modus,
+Tags, Suche/Filter, WLAN-Regeln, JSON-Backups, Syncthing-tauglicher
+Exchange, mehrere Stoppuhren, Zeitzonen-Globus und mehr. Die
+Standortberechtigung dient nur dem Auslesen der WLAN-SSID für optionale
+Regeln — kein Internetzugriff.

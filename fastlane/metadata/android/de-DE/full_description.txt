@@ -1,33 +1,46 @@
-"Uhr" ist eine datenschutzbewusste Open-Source-Uhr, die auf AOSP basiert.
-Sie verwendet keine Internet-Berechtigung und ist daher zu 100% offline.
+AlarmClock Deluxe (Wecker, Uhr, Timer, Stoppuhr) (de.huttersoft.mightyalarmclock)
+ist ein Fork von BlackyHawkys Clock (basierend auf AOSP) und steht unter der
+GNU General Public License v3.0 (GPL-3.0).
 
-Merkmale:
+Die App benötigt keine Internet-Berechtigung und ist daher zu 100 % offline.
+
+Die Standortberechtigung wird nur verwendet, um die SSID des verbundenen WLANs
+für optionale WLAN-Regeln pro Wecker auszulesen. Es werden keine Standortdaten
+erfasst oder gesendet; die App kann nicht auf das Internet zugreifen.
+
+Zusätzlich zum Funktionsumfang der ursprünglichen Clock-App bietet AlarmClock
+Deluxe:
 <ul>
-  <li>Einstellen der Wecker auf ein bestimmtes Datum;</li>
-  <li>Kippen und Schütteln zum Ausschalten/Aufschieben eines Weckers;</li>
-  <li>Ausschalten/Aufschieben des Weckers mit der Power- oder den Lautstärketasten;</li>
-  <li>Nur bei Snapdragon-Smartphones: Der Wecker wird auch ausgelöst, wenn sie ausgeschaltet sind;</li>
-    <ul>
-      <li>Leider funktioniert dies auf einigen Geräten nicht, obwohl die System-App <i>"com.qualcomm.qti.poweroffalarm"</i> vorhanden ist.</li>
-    </ul>
-  <li>Wischen, um einen Wecker zu beenden;</li>
-  <li>Möglichkeit, Wecker zu duplizieren;</li>
-  <li>Wecker-Titel erstellen und ändern;</li>
-  <li>Individuell anpassbare Wecktöne;</li>
-  <li>Möglichkeit, Wecktöne zufällig abzuspielen;</li>
-  <li>Helles, dunkles oder System-Thema;</li>
-  <li>AMOLED-Modus für dunkles Thema;</li>
+  <li>Eine Klingel-Warteschlange: mehrere nah beieinander liegende Wecker werden nacheinander angezeigt, statt als verpasst zu gelten;</li>
+  <li>Progressives Schlummern (jedes Schlummern kann automatisch länger werden) sowie manuelle Schlummerdauer;</li>
+  <li>Globaler Stumm-Modus: alle Wecker bis zu einem gewählten Zeitpunkt stumm oder nur vibrierend;</li>
+  <li>Benennung eines neuen Weckers direkt bei der Erstellung;</li>
+  <li>Suche, Filter und zusätzliche Sortieroptionen in der Weckerliste;</li>
+  <li>Tags mit eigenem Klingelton, der automatisch für Wecker ohne eigenen Ton gilt;</li>
+  <li>Geräteweite Wecker-Statistik mit exportierbarem Ereignislog;</li>
+  <li>WLAN-Regeln zum automatischen Ein-/Ausschalten von Weckern je nach verbundenem Netz;</li>
+  <li>Einfache JSON-Backups (ohne ZIP) in einen Ordner Ihrer Wahl, optional zeitgesteuert;</li>
+  <li>Experimenteller „Exchange“-Mechanismus zum Verschieben/Teilen von Weckern über einen gemeinsamen Ordner;</li>
+  <li>Mehrere benannte Stoppuhren parallel, mit Protokollierung der Läufe im Ereignislog;</li>
+  <li>Drehbarer Zeitzonen-Globus auf dem Uhr-Tab mit den gewählten Weltstädten;</li>
+</ul>
+
+…sowie der volle Funktionsumfang der ursprünglichen Clock-App:
+<ul>
+  <li>Wecker auf ein bestimmtes Datum setzen;</li>
+  <li>Umdrehen und Schütteln zum Ausschalten/Aufschieben;</li>
+  <li>Ausschalten/Aufschieben mit Power- oder Lautstärketasten;</li>
+  <li>Wischen zum Löschen eines Weckers;</li>
+  <li>Wecker duplizieren;</li>
+  <li>Anpassbarer Wecker-Titel und Klingelton;</li>
+  <li>Helles, dunkles oder System-Thema, inkl. AMOLED-Modus;</li>
   <li>Anpassbare Oberfläche;</li>
   <li>Digitaler oder analoger Uhrenstil;</li>
-  <li>Anzeige der Heimatzeit auf Reisen;</li>
-  <li>Anzeige der Uhrzeit von vielen Städten der Welt;</li>
-  <li>Timer und Stoppuhr enthalten;</li>
-  <li>Möglichkeit, die Stoppuhr-Zeiten mit Adressbuch-Kontakten zu teilen;</li>
+  <li>Heimatzeit auf Reisen und Uhrzeiten vieler Städte weltweit;</li>
+  <li>Timer und Stoppuhr;</li>
   <li>Anpassbarer Bildschirmschoner;</li>
-  <li>Moderne Widgets;</li>
-  <li>Anpassbare Widgets;</li>
-  <li>Unterstützung für Kacheln in den Schnelleinstellungen (Android 7+) </li>
-  <li>Sichern und Wiederherstellen von Einstellungen (außer benutzerdefinierte Wecktöne)</li>
-  <li>Material-You-Design;</li>
-  <li>Dynamische Farben für Android 12+;</li>
+  <li>Moderne, anpassbare Widgets;</li>
+  <li>Kacheln in den Schnelleinstellungen (Android 7+);</li>
+  <li>Sichern und Wiederherstellen der App-Daten;</li>
+  <li>Material Design mit dynamischen Farben für Android 12+;</li>
 </ul>
