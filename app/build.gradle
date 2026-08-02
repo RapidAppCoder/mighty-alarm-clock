@@ -11,9 +11,6 @@ android {
         targetSdk = 36
         versionCode = 202608001
         versionName = '2026.08.001'
-        ndk {
-            abiFilters = ['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64']
-        }
     }
 
     def keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -117,8 +114,6 @@ android {
         includeInApk = false
         includeInBundle = false
     }
-
-    ndkVersion = '29.0.14206865'
 
     namespace = 'com.best.deskclock'
 }

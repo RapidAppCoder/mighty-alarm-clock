@@ -3,7 +3,10 @@
 # placed at metadata/de.huttersoft.mightyalarmclock.yml (adjust Repo/Commits as needed).
 
 Categories:
-  - Time
+  - Alarm Clock
+  - Clock
+  - Stopwatch
+  - Timer
 License: GPL-3.0-only
 AuthorName: HutterSoft
 SourceCode: https://github.com/REPLACE_ME/mighty-alarm-clock
@@ -24,6 +27,6 @@ Builds:
       - yes
 
 AutoUpdateMode: Version
-UpdateCheckMode: Tags
+UpdateCheckMode: Tags ^[0-9]{4}\.[0-9]{2}\.[0-9]+$
 CurrentVersion: 2026.08.001
 CurrentVersionCode: 202608001
