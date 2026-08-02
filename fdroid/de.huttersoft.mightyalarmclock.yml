@@ -1,4 +1,4 @@
-# Stub F-Droid metadata for Mighty Alarm Clock.
+# Stub F-Droid metadata for AlarmClock Deluxe (Wecker, Uhr, Timer, Stoppuhr).
 # Submit a merge request to https://gitlab.com/fdroid/fdroiddata with this file
 # placed at metadata/de.huttersoft.mightyalarmclock.yml (adjust Repo/Commits as needed).
 
@@ -9,8 +9,8 @@ AuthorName: HutterSoft
 SourceCode: https://github.com/REPLACE_ME/mighty-alarm-clock
 IssueTracker: https://github.com/REPLACE_ME/mighty-alarm-clock/issues
 
-AutoName: AlarmClock Deluxe (Wecker)
-Name: AlarmClock Deluxe (Wecker)
+AutoName: AlarmClock Deluxe (Wecker, Uhr, Timer, Stoppuhr)
+Name: AlarmClock Deluxe (Wecker, Uhr, Timer, Stoppuhr)
 
 RepoType: git
 Repo: https://github.com/REPLACE_ME/mighty-alarm-clock

@@ -1,9 +1,10 @@
-Mighty Alarm Clock (de.huttersoft.mightyalarmclock) is a fork of BlackyHawky's Clock, itself
-based on AOSP, released under the GNU General Public License v3.0 (GPL-3.0).
+AlarmClock Deluxe (Wecker, Uhr, Timer, Stoppuhr) (de.huttersoft.mightyalarmclock) is a fork of
+BlackyHawky's Clock, itself based on AOSP, released under the GNU General Public License v3.0
+(GPL-3.0).
 
 Does not use the internet permission, and thus is 100% offline.
 
-On top of everything the original Clock app offers, Mighty Alarm Clock adds:
+On top of everything the original Clock app offers, AlarmClock Deluxe adds:
 <ul>
   <li>A fire queue so multiple alarms firing close together are presented one after another instead of being marked missed;</li>
   <li>Progressive snooze (each snooze can automatically get longer) plus a manual snooze duration picker;</li>

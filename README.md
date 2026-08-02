@@ -1,6 +1,6 @@
 <!--suppress CheckImageSize -->
-# <img width="24" height="24" alt="image" src="/fastlane/metadata/android/en-US/images/icon.png" /> Mighty Alarm Clock
-**Mighty Alarm Clock** is a HutterSoft fork of [Clock](https://github.com/BlackyHawky/Clock) (AOSP-inspired), focused on richer alarm management: tags, filters, Syncthing-friendly sync/handoff, Wi‑Fi rules, and more.
+# <img width="24" height="24" alt="image" src="/fastlane/metadata/android/en-US/images/icon.png" /> AlarmClock Deluxe (Wecker, Uhr, Timer, Stoppuhr)
+**AlarmClock Deluxe (Wecker, Uhr, Timer, Stoppuhr)** is a HutterSoft fork of [Clock](https://github.com/BlackyHawky/Clock) (AOSP-inspired), focused on richer alarm management: tags, filters, Syncthing-friendly sync/handoff, Wi‑Fi rules, and more.
 
 Application ID: `de.huttersoft.mightyalarmclock` (installs side-by-side with the upstream Clock app).
 

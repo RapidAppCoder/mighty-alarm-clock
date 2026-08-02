@@ -5,7 +5,7 @@
     SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_label">AlarmClock Deluxe (Wecker)</string>
+    <string name="app_label">AlarmClock Deluxe (Wecker, Uhr, Timer, Stoppuhr)</string>
     <string name="default_label">قوڭغۇراق</string>
     <string name="alarm_vibrate">تىترەت</string>
     <string name="delete">ئۆچۈر</string>
