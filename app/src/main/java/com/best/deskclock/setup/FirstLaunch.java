@@ -19,6 +19,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.best.deskclock.BuildConfig;
 import com.best.deskclock.DeskClock;
+import com.best.deskclock.ProjectUrls;
 import com.best.deskclock.R;
 import com.best.deskclock.base.BaseActivity;
 import com.best.deskclock.databinding.FirstLaunchActivityBinding;
@@ -140,7 +141,7 @@ public class FirstLaunch extends BaseActivity {
      * Points to the GitHub page where you can view all the application's features.
      */
     private void setupMainFeaturesText() {
-        String link = ("<a href=\"https://github.com/BlackyHawky/Clock#features-\">"
+        String link = ("<a href=\"" + ProjectUrls.GITHUB_FEATURES + "\">"
             + getString(R.string.first_launch_main_feature_link) + "</a>");
 
         Spanned mainFeaturesMessage = HtmlCompat.fromHtml(getString(R.string.first_launch_main_feature_message, link),

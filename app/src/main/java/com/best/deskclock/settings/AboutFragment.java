@@ -40,6 +40,7 @@ import androidx.preference.SwitchPreferenceCompat;
 
 import com.best.deskclock.BuildConfig;
 import com.best.deskclock.DeskClock;
+import com.best.deskclock.ProjectUrls;
 import com.best.deskclock.R;
 import com.best.deskclock.alarms.AlarmStateManager;
 import com.best.deskclock.base.AppExecutors;
@@ -349,31 +350,31 @@ public class AboutFragment extends ScreenFragment implements Preference.OnPrefer
                 } else if (BuildConfig.IS_NIGHTLY_BUILD) {
                     version = version.replace(BuildConfig.VERSION_NAME, "nightly" + "-" + BuildConfig.COMMIT_NUMBER);
                 }
-                link = "https://github.com/BlackyHawky/Clock/releases/tag/" + version;
+                link = ProjectUrls.githubReleaseTag(version);
                 iconId = R.drawable.ic_about_update;
                 titleId = R.string.whats_new_title;
                 messageId = R.string.whats_new_dialog_message;
             }
             case KEY_ABOUT_FEATURES -> {
-                link = "https://github.com/BlackyHawky/Clock?tab=readme-ov-file#-features";
+                link = ProjectUrls.GITHUB_FEATURES;
                 iconId = R.drawable.ic_about_features;
                 titleId = R.string.features_title;
                 messageId = R.string.features_dialog_message;
             }
             case KEY_ABOUT_VIEW_ON_GITHUB -> {
-                link = "https://github.com/BlackyHawky/Clock";
+                link = ProjectUrls.GITHUB_REPO;
                 iconId = R.drawable.ic_about_github;
                 titleId = R.string.about_github_link;
                 messageId = R.string.github_dialog_message;
             }
             case KEY_ABOUT_TRANSLATE -> {
-                link = "https://translate.codeberg.org/projects/clock";
+                link = ProjectUrls.TRANSLATE;
                 iconId = R.drawable.ic_about_translate;
                 titleId = R.string.about_translate_link;
                 messageId = R.string.translate_dialog_message;
             }
             case KEY_ABOUT_READ_LICENCE -> {
-                link = "https://github.com/BlackyHawky/Clock/blob/main/LICENSE";
+                link = ProjectUrls.GITHUB_LICENSE;
                 iconId = R.drawable.ic_about_license;
                 titleId = R.string.license;
                 messageId = R.string.license_dialog_message;
