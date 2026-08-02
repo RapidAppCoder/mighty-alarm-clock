@@ -598,6 +598,10 @@
     <string name="sw_laps_title">Runden</string>
     <string name="sw_split_title">Zwischenstand</string>
     <string name="sw_total_title">Insgesamt</string>
+    <string name="stopwatch_label_box_title">Stoppuhr-Name</string>
+    <string name="sw_add_stopwatch">Stoppuhr hinzufügen</string>
+    <string name="sw_unnamed">Stoppuhr <xliff:g id="number">%d</xliff:g></string>
+    <string name="sw_delete_confirm">Diese Stoppuhr löschen?</string>
     <string name="analog_clock_size_title">Analoguhr-Größe</string>
     <string name="display_compact_timers_title">Aktive Timer im Kompaktmodus anzeigen</string>
     <string name="display_battery_title">Batteriestand zeigen</string>
@@ -700,6 +704,7 @@
     <string name="mighty_event_log_entry">%1$s\n%2$s — %3$s\n%4$s</string>
     <string name="mighty_event_log_entry_no_details">%1$s\n%2$s — %3$s</string>
     <string name="mighty_event_log_untitled_alarm">(ohne Name)</string>
+    <string name="mighty_event_log_stopwatch_stopped">Stoppuhr gestoppt</string>
 
     <string name="mighty_category_global_mute">Globaler Stummmodus</string>
     <string name="mighty_global_mute_title">Globaler Stummmodus</string>

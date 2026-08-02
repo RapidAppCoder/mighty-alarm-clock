@@ -32,6 +32,7 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.transition.TransitionManager;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -58,7 +59,9 @@ import com.best.deskclock.data.SettingsDAO;
 import com.best.deskclock.data.Stopwatch;
 import com.best.deskclock.data.StopwatchListener;
 import com.best.deskclock.databinding.StopwatchFragmentBinding;
+import com.best.deskclock.dialogfragment.LabelDialogFragment;
 import com.best.deskclock.events.Events;
+import com.best.deskclock.uicomponents.CustomDialog;
 import com.best.deskclock.uicomponents.CustomTooltip;
 import com.best.deskclock.utils.LogUtils;
 import com.best.deskclock.utils.ThemeUtils;
@@ -96,6 +99,11 @@ public final class StopwatchFragment extends DeskClockFragment implements Runnab
      * The data source for the lap list.
      */
     private LapsAdapter mLapsAdapter;
+
+    /**
+     * The data source for the stopwatch selector chips.
+     */
+    private StopwatchSelectorAdapter mSelectorAdapter;
 
     /**
      * The layout manager for the {@link #mLapsAdapter}.
@@ -176,6 +184,26 @@ public final class StopwatchFragment extends DeskClockFragment implements Runnab
         mLapsLayoutManager = new LinearLayoutManager(requireContext());
         mBinding.lapsList.setLayoutManager(mLapsLayoutManager);
 
+        mBinding.stopwatchSelectorLayout.stopwatchList.setLayoutManager(
+            new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
+        mSelectorAdapter = new StopwatchSelectorAdapter(requireContext(), new SelectorListener());
+        mBinding.stopwatchSelectorLayout.stopwatchList.setAdapter(mSelectorAdapter);
+
+        mBinding.stopwatchSelectorLayout.addStopwatchButton.setOnClickListener(v -> {
+            Utils.performHapticFeedback(v, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
+            DataModel.getDataModel().addStopwatch(null);
+        });
+        mBinding.stopwatchSelectorLayout.addStopwatchButton.setOnLongClickListener(v -> {
+            CustomTooltip.showAbove(v, getString(R.string.sw_add_stopwatch), true);
+            return true;
+        });
+
+        mBinding.stopwatchLabel.setOnClickListener(v -> {
+            Utils.performHapticFeedback(v, HapticFeedbackConstantsCompat.VIRTUAL_KEY);
+            final LabelDialogFragment fragment = LabelDialogFragment.newInstance(getStopwatch());
+            LabelDialogFragment.show(getParentFragmentManager(), fragment);
+        });
+
         return mBinding.getRoot();
     }
 
@@ -201,6 +229,8 @@ public final class StopwatchFragment extends DeskClockFragment implements Runnab
             tv.setTypeface(boldTypeface);
         }
 
+        mBinding.stopwatchLabel.setTypeface(regularTypeface);
+
         // Timer text serves as a virtual start/stop button.
         mStopwatchTextController = new StopwatchTextController(
             mBinding.stopwatchTimeLayout.stopwatchTimeText, mBinding.stopwatchTimeLayout.stopwatchHundredthsText);
@@ -211,6 +241,7 @@ public final class StopwatchFragment extends DeskClockFragment implements Runnab
         DataModel.getDataModel().addStopwatchListener(mStopwatchWatcher);
 
         updateTime();
+        updateStopwatchLabel();
         showOrHideLaps(getStopwatch().isReset());
 
         mPrefs.registerOnSharedPreferenceChangeListener(mPrefListener);
@@ -270,8 +301,10 @@ public final class StopwatchFragment extends DeskClockFragment implements Runnab
         mPrefs.unregisterOnSharedPreferenceChangeListener(mPrefListener);
 
         mBinding.lapsList.setAdapter(null);
+        mBinding.stopwatchSelectorLayout.stopwatchList.setAdapter(null);
 
         mStopwatchTextController = null;
+        mSelectorAdapter = null;
 
         mAreSettingsChanged = false;
 
@@ -632,6 +665,11 @@ public final class StopwatchFragment extends DeskClockFragment implements Runnab
     private void updateUI(@UpdateFabFlag int updateTypes) {
         // Draw the latest stopwatch and current lap times.
         updateTime();
+        updateStopwatchLabel();
+
+        if (mSelectorAdapter != null) {
+            mSelectorAdapter.refresh();
+        }
 
         mBinding.stopwatchCircle.update();
 
@@ -643,6 +681,47 @@ public final class StopwatchFragment extends DeskClockFragment implements Runnab
 
         // Update button states.
         updateFab(updateTypes);
+    }
+
+    private void updateStopwatchLabel() {
+        if (mBinding == null) {
+            return;
+        }
+        final String label = getStopwatch().getLabel();
+        mBinding.stopwatchLabel.setText(TextUtils.isEmpty(label) ? null : label);
+    }
+
+    private void selectStopwatch(Stopwatch stopwatch) {
+        DataModel.getDataModel().setSelectedStopwatchId(stopwatch.getId());
+        if (mLapsAdapter != null) {
+            mLapsAdapter.notifyDataSetChanged();
+        }
+        updateUI(FAB_AND_BUTTONS_IMMEDIATE);
+    }
+
+    private void confirmAndDeleteStopwatch(Stopwatch stopwatch) {
+        CustomDialog.create(
+            requireContext(),
+            null,
+            AppCompatResources.getDrawable(requireContext(), R.drawable.ic_delete),
+            getString(R.string.delete),
+            getString(R.string.sw_delete_confirm),
+            null,
+            getString(android.R.string.ok),
+            (d, w) -> {
+                DataModel.getDataModel().removeStopwatch(stopwatch);
+                if (mLapsAdapter != null) {
+                    mLapsAdapter.notifyDataSetChanged();
+                }
+                updateUI(FAB_AND_BUTTONS_IMMEDIATE);
+            },
+            getString(android.R.string.cancel),
+            null,
+            null,
+            null,
+            null,
+            CustomDialog.SoftInputMode.NONE
+        ).show();
     }
 
     /**
@@ -757,18 +836,77 @@ public final class StopwatchFragment extends DeskClockFragment implements Runnab
      */
     private class StopwatchWatcher implements StopwatchListener {
         @Override
-        public void stopwatchUpdated(Stopwatch after) {
+        public void stopwatchAdded(Stopwatch stopwatch) {
+            if (DataModel.getDataModel().isApplicationInForeground()) {
+                if (mLapsAdapter != null) {
+                    mLapsAdapter.notifyDataSetChanged();
+                }
+                updateUI(FAB_AND_BUTTONS_IMMEDIATE);
+            }
+        }
+
+        @Override
+        public void stopwatchUpdated(Stopwatch before, Stopwatch after) {
             adjustWakeLock();
 
-            if (after.isReset()) {
-                if (DataModel.getDataModel().isApplicationInForeground()) {
-                    updateUI(BUTTONS_IMMEDIATE);
-                }
+            if (!DataModel.getDataModel().isApplicationInForeground()) {
                 return;
             }
-            if (DataModel.getDataModel().isApplicationInForeground()) {
-                updateUI(FAB_MORPH | BUTTONS_IMMEDIATE);
+
+            // Always refresh selector chips so running indicators stay current.
+            if (mSelectorAdapter != null) {
+                mSelectorAdapter.refresh();
             }
+
+            // Only rebuild the detail UI when the selected stopwatch changed.
+            if (after.getId() != DataModel.getDataModel().getSelectedStopwatchId()) {
+                return;
+            }
+
+            updateStopwatchLabel();
+
+            if (after.isReset()) {
+                updateUI(BUTTONS_IMMEDIATE);
+                return;
+            }
+            updateUI(FAB_MORPH | BUTTONS_IMMEDIATE);
+        }
+
+        @Override
+        public void stopwatchRemoved(Stopwatch stopwatch) {
+            if (DataModel.getDataModel().isApplicationInForeground()) {
+                if (mLapsAdapter != null) {
+                    mLapsAdapter.notifyDataSetChanged();
+                }
+                updateUI(FAB_AND_BUTTONS_IMMEDIATE);
+            }
+        }
+    }
+
+    private final class SelectorListener implements StopwatchSelectorAdapter.Listener {
+        @Override
+        public void onStopwatchSelected(Stopwatch stopwatch) {
+            selectStopwatch(stopwatch);
+        }
+
+        @Override
+        public void onStopwatchLongPressed(Stopwatch stopwatch) {
+            final CharSequence[] items = new CharSequence[]{
+                getString(R.string.add_label),
+                getString(R.string.delete)
+            };
+            new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setItems(items, (dialog, which) -> {
+                    if (which == 0) {
+                        DataModel.getDataModel().setSelectedStopwatchId(stopwatch.getId());
+                        final LabelDialogFragment fragment = LabelDialogFragment.newInstance(stopwatch);
+                        LabelDialogFragment.show(getParentFragmentManager(), fragment);
+                    } else if (which == 1) {
+                        confirmAndDeleteStopwatch(stopwatch);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
         }
     }
 

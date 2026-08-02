@@ -31,6 +31,7 @@ import com.best.deskclock.R;
 import com.best.deskclock.data.City;
 import com.best.deskclock.data.DataModel;
 import com.best.deskclock.data.SettingsDAO;
+import com.best.deskclock.data.Stopwatch;
 import com.best.deskclock.data.Timer;
 import com.best.deskclock.databinding.DialogEditTextBinding;
 import com.best.deskclock.provider.Alarm;
@@ -62,6 +63,7 @@ public class LabelDialogFragment extends DialogFragment {
     private static final String ARG_CITY_NAME = "city_name";
 
     private static final String ARG_TIMER_ID = "arg_timer_id";
+    private static final String ARG_STOPWATCH_ID = "arg_stopwatch_id";
 
     private static final String ARG_LABEL = "arg_label";
     private static final String ARG_IS_ALARM = "arg_is_alarm";
@@ -72,6 +74,7 @@ public class LabelDialogFragment extends DialogFragment {
     private Button mDefaultButton;
     private boolean mIsAlarm;
     private int mTimerId;
+    private int mStopwatchId;
     private String mDefaultTimerLabel = null;
     private String mCityId;
 
@@ -103,6 +106,21 @@ public class LabelDialogFragment extends DialogFragment {
         final Bundle args = new Bundle();
         args.putString(ARG_LABEL, timer.getLabel());
         args.putInt(ARG_TIMER_ID, timer.getId());
+
+        final LabelDialogFragment frag = new LabelDialogFragment();
+        frag.setArguments(args);
+        return frag;
+    }
+
+    /**
+     * Creates a new instance of {@link LabelDialogFragment} to edit the label of the given stopwatch.
+     *
+     * @param stopwatch the {@link Stopwatch} whose label will be edited
+     */
+    public static LabelDialogFragment newInstance(Stopwatch stopwatch) {
+        final Bundle args = new Bundle();
+        args.putString(ARG_LABEL, stopwatch.getLabel());
+        args.putInt(ARG_STOPWATCH_ID, stopwatch.getId());
 
         final LabelDialogFragment frag = new LabelDialogFragment();
         frag.setArguments(args);
@@ -155,6 +173,7 @@ public class LabelDialogFragment extends DialogFragment {
         boolean syncAlarmByLabel = mIsAlarm && args.getBoolean(ARG_SYNC_ALARM_BY_LABEL, false);
 
         mTimerId = args.getInt(ARG_TIMER_ID, -1);
+        mStopwatchId = args.getInt(ARG_STOPWATCH_ID, -1);
         if (isTimer()) {
             Timer timer = getTimer();
             if (timer != null) {
@@ -180,6 +199,9 @@ public class LabelDialogFragment extends DialogFragment {
         } else if (isTimer()) {
             iconResId = R.drawable.ic_label;
             title = getString(R.string.timer_label_box_title);
+        } else if (isStopwatch()) {
+            iconResId = R.drawable.ic_label;
+            title = getString(R.string.stopwatch_label_box_title);
         } else if (isCity()) {
             iconResId = R.drawable.ic_note;
             title = getString(R.string.city_note_dialog_title, cityName);
@@ -242,6 +264,8 @@ public class LabelDialogFragment extends DialogFragment {
                     if (timer != null && mDefaultTimerLabel != null) {
                         DataModel.getDataModel().setTimerLabel(timer, mDefaultTimerLabel);
                     }
+                } else if (isStopwatch()) {
+                    applyLabel("");
                 } else {
                     mBinding.syncAlarmByLabelCheckbox.setChecked(false);
 
@@ -311,6 +335,12 @@ public class LabelDialogFragment extends DialogFragment {
             if (timer != null) {
                 DataModel.getDataModel().setTimerLabel(timer, trimmedLabel);
             }
+        } else if (isStopwatch()) {
+            final Stopwatch stopwatch = getStopwatch();
+
+            if (stopwatch != null) {
+                DataModel.getDataModel().setStopwatchLabel(stopwatch, trimmedLabel);
+            }
         } else if (isCity()) {
             Bundle result = new Bundle();
             result.putString(RESULT_CITY_ID, mCityId);
@@ -329,6 +359,13 @@ public class LabelDialogFragment extends DialogFragment {
      */
     private boolean isTimer() {
         return mTimerId >= 0;
+    }
+
+    /**
+     * @return {@code true} if the dialog is editing a stopwatch label.
+     */
+    private boolean isStopwatch() {
+        return mStopwatchId >= 0;
     }
 
     /**
@@ -378,6 +415,17 @@ public class LabelDialogFragment extends DialogFragment {
         }
 
         return DataModel.getDataModel().getTimer(mTimerId);
+    }
+
+    /**
+     * @return the stopwatch for which the label is being edited.
+     */
+    private Stopwatch getStopwatch() {
+        if (mStopwatchId < 0) {
+            return null;
+        }
+
+        return DataModel.getDataModel().getStopwatch(mStopwatchId);
     }
 
     /**

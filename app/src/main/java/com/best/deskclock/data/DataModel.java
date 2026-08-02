@@ -128,21 +128,21 @@ public final class DataModel {
     }
 
     /**
-     * Updates all timers and the stopwatch after the device has shutdown and restarted.
+     * Updates all timers and stopwatches after the device has shutdown and restarted.
      */
     public void updateAfterReboot() {
         enforceMainLooper();
         mTimerModel.updateTimersAfterReboot();
-        mStopwatchModel.setStopwatch(getStopwatch().updateAfterReboot());
+        mStopwatchModel.updateStopwatchesAfterReboot();
     }
 
     /**
-     * Updates all timers and the stopwatch after the device's time has changed.
+     * Updates all timers and stopwatches after the device's time has changed.
      */
     public void updateAfterTimeSet() {
         enforceMainLooper();
         mTimerModel.updateTimersAfterTimeSet();
-        mStopwatchModel.setStopwatch(getStopwatch().updateAfterTimeSet());
+        mStopwatchModel.updateStopwatchesAfterTimeSet();
     }
 
     /**
@@ -577,7 +577,7 @@ public final class DataModel {
     }
 
     /**
-     * @param stopwatchListener to be notified when stopwatch changes or laps are added
+     * @param stopwatchListener to be notified when stopwatches change or laps are added
      */
     public void addStopwatchListener(StopwatchListener stopwatchListener) {
         enforceMainLooper();
@@ -585,7 +585,7 @@ public final class DataModel {
     }
 
     /**
-     * @param stopwatchListener to no longer be notified when stopwatch changes or laps are added
+     * @param stopwatchListener to no longer be notified when stopwatches change or laps are added
      */
     public void removeStopwatchListener(StopwatchListener stopwatchListener) {
         enforceMainLooper();
@@ -593,7 +593,15 @@ public final class DataModel {
     }
 
     /**
-     * @return the current state of the stopwatch
+     * @return an unmodifiable list of all stopwatches
+     */
+    public List<Stopwatch> getStopwatches() {
+        enforceMainLooper();
+        return mStopwatchModel.getStopwatches();
+    }
+
+    /**
+     * @return the currently selected stopwatch
      */
     public Stopwatch getStopwatch() {
         enforceMainLooper();
@@ -601,31 +609,123 @@ public final class DataModel {
     }
 
     /**
-     *
+     * @return the stopwatch with the given id
+     */
+    public Stopwatch getStopwatch(int stopwatchId) {
+        enforceMainLooper();
+        return mStopwatchModel.getStopwatch(stopwatchId);
+    }
+
+    /**
+     * @return the id of the currently selected stopwatch
+     */
+    public int getSelectedStopwatchId() {
+        enforceMainLooper();
+        return mStopwatchModel.getSelectedStopwatchId();
+    }
+
+    /**
+     * Selects the stopwatch with the given id for the UI and notifications.
+     */
+    public void setSelectedStopwatchId(int stopwatchId) {
+        enforceMainLooper();
+        mStopwatchModel.setSelectedStopwatchId(stopwatchId);
+    }
+
+    /**
+     * Creates a new stopwatch, optionally with a label, and selects it.
+     */
+    public Stopwatch addStopwatch(String label) {
+        enforceMainLooper();
+        return mStopwatchModel.addStopwatch(label);
+    }
+
+    /**
+     * Removes the stopwatch. If it is the last one, it is reset instead.
+     */
+    public void removeStopwatch(Stopwatch stopwatch) {
+        enforceMainLooper();
+        mStopwatchModel.removeStopwatch(stopwatch);
+    }
+
+    /**
+     * Sets the label of the given stopwatch.
+     */
+    public void setStopwatchLabel(Stopwatch stopwatch, String label) {
+        enforceMainLooper();
+        mStopwatchModel.setStopwatch(stopwatch.setLabel(label));
+    }
+
+    /**
+     * Starts the selected stopwatch.
      */
     public void startStopwatch() {
         enforceMainLooper();
-        mStopwatchModel.setStopwatch(getStopwatch().start());
+        startStopwatch(getStopwatch());
     }
 
     /**
-     *
+     * Starts the given stopwatch.
+     */
+    public void startStopwatch(Stopwatch stopwatch) {
+        enforceMainLooper();
+        mStopwatchModel.setStopwatch(stopwatch.start());
+    }
+
+    /**
+     * Pauses the selected stopwatch.
      */
     public void pauseStopwatch() {
         enforceMainLooper();
-        mStopwatchModel.setStopwatch(getStopwatch().pause());
+        pauseStopwatch(getStopwatch());
     }
 
     /**
-     *
+     * Pauses the given stopwatch.
+     */
+    public void pauseStopwatch(Stopwatch stopwatch) {
+        enforceMainLooper();
+        mStopwatchModel.setStopwatch(stopwatch.pause());
+    }
+
+    /**
+     * Resets the selected stopwatch.
      */
     public void resetStopwatch() {
         enforceMainLooper();
-        mStopwatchModel.setStopwatch(getStopwatch().reset());
+        resetStopwatch(getStopwatch());
     }
 
     /**
-     * @return the laps recorded for this stopwatch
+     * Resets the given stopwatch.
+     */
+    public void resetStopwatch(Stopwatch stopwatch) {
+        enforceMainLooper();
+        mStopwatchModel.setStopwatch(stopwatch.reset());
+    }
+
+    /**
+     * Resets every stopwatch that is not already reset.
+     */
+    public void resetAllStopwatches() {
+        enforceMainLooper();
+        for (Stopwatch stopwatch : new ArrayList<>(getStopwatches())) {
+            if (!stopwatch.isReset()) {
+                resetStopwatch(stopwatch);
+            }
+        }
+    }
+
+    /**
+     * @return {@code true} if any stopwatch is currently running
+     */
+    public boolean isAnyStopwatchRunning() {
+        enforceMainLooper();
+        return mStopwatchModel.isAnyStopwatchRunning();
+    }
+
+    /**
+     * @return the laps recorded for the selected stopwatch
      */
     public List<Lap> getLaps() {
         enforceMainLooper();
@@ -633,7 +733,16 @@ public final class DataModel {
     }
 
     /**
-     * @return a newly recorded lap completed now; {@code null} if no more laps can be added
+     * @return the laps recorded for the given stopwatch
+     */
+    public List<Lap> getLaps(int stopwatchId) {
+        enforceMainLooper();
+        return mStopwatchModel.getLaps(stopwatchId);
+    }
+
+    /**
+     * @return a newly recorded lap completed now on the selected stopwatch;
+     * {@code null} if no more laps can be added
      */
     public Lap addLap() {
         enforceMainLooper();
@@ -641,7 +750,7 @@ public final class DataModel {
     }
 
     /**
-     * @return {@code true} iff more laps can be recorded
+     * @return {@code true} iff more laps can be recorded on the selected stopwatch
      */
     public boolean canAddMoreLaps() {
         enforceMainLooper();
@@ -649,7 +758,15 @@ public final class DataModel {
     }
 
     /**
-     * @return the longest lap time of all recorded laps and the current lap
+     * @return {@code true} iff more laps can be recorded on the given stopwatch
+     */
+    public boolean canAddMoreLaps(int stopwatchId) {
+        enforceMainLooper();
+        return mStopwatchModel.canAddMoreLaps(stopwatchId);
+    }
+
+    /**
+     * @return the longest lap time of all recorded laps and the current lap for the selected stopwatch
      */
     public long getLongestLapTime() {
         enforceMainLooper();

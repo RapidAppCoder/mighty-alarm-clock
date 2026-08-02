@@ -714,6 +714,14 @@
     <string name="sw_split_title">Split</string>
     <!-- Title used for the total column in the stopwatch view -->
     <string name="sw_total_title">Total</string>
+    <!-- Title of dialog box for editing stopwatch label -->
+    <string name="stopwatch_label_box_title">Stopwatch name</string>
+    <!-- Describes the purpose of the button to add a new stopwatch -->
+    <string name="sw_add_stopwatch">Add stopwatch</string>
+    <!-- Fallback name for an unnamed stopwatch in the selector -->
+    <string name="sw_unnamed">Stopwatch <xliff:g id="number">%d</xliff:g></string>
+    <!-- Confirms deletion of a stopwatch -->
+    <string name="sw_delete_confirm">Delete this stopwatch?</string>
     <!-- Abbreviation for temporal hours [CHAR LIMIT=1] -->
     <string name="hours_label">h</string>
     <!-- Abbreviation for temporal minutes [CHAR LIMIT=1] -->
@@ -1506,6 +1514,7 @@
     <string name="mighty_event_log_entry">%1$s\n%2$s — %3$s\n%4$s</string>
     <string name="mighty_event_log_entry_no_details">%1$s\n%2$s — %3$s</string>
     <string name="mighty_event_log_untitled_alarm">(no label)</string>
+    <string name="mighty_event_log_stopwatch_stopped">Stopwatch stopped</string>
 
     <string name="mighty_category_global_mute">Global mute</string>
     <!-- Title of the global mute preference and dialog -->

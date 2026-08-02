@@ -417,7 +417,7 @@ public class MightyFeaturesFragment extends ScreenFragment
                     final String label = entry.alarmLabel == null || entry.alarmLabel.isEmpty()
                         ? getString(R.string.mighty_event_log_untitled_alarm)
                         : entry.alarmLabel;
-                    final String type = entry.eventType == null ? "" : entry.eventType;
+                    final String type = formatEventType(entry.eventType);
                     final String details = entry.details;
 
                     if (details == null || details.isEmpty()) {
@@ -435,6 +435,16 @@ public class MightyFeaturesFragment extends ScreenFragment
                     .show();
             });
         });
+    }
+
+    private String formatEventType(String eventType) {
+        if (eventType == null) {
+            return "";
+        }
+        if (EventLogStore.EVENT_STOPWATCH_STOPPED.equals(eventType)) {
+            return getString(R.string.mighty_event_log_stopwatch_stopped);
+        }
+        return eventType;
     }
 
     private void exportEventLog() {

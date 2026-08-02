@@ -976,7 +976,7 @@ public class DeskClock extends BaseActivity implements FabContainer {
 
             switch (selectedTab) {
                 case TIMERS -> screenShouldStayOn = DataModel.getDataModel().hasActiveTimer();
-                case STOPWATCH -> screenShouldStayOn = DataModel.getDataModel().getStopwatch().isRunning();
+                case STOPWATCH -> screenShouldStayOn = DataModel.getDataModel().isAnyStopwatchRunning();
             }
         }
 

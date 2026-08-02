@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Copyright (C) 2026 The Mighty Alarm Clock Project
+    SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/stopwatch_selector_bar"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="10dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="4dp">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/stopwatch_list"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        tools:itemCount="3"
+        tools:listitem="@layout/stopwatch_chip_item" />
+
+    <ImageButton
+        android:id="@+id/add_stopwatch_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="4dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/sw_add_stopwatch"
+        android:src="@drawable/ic_add"
+        app:tint="?attr/colorPrimary"
+        tools:ignore="TouchTargetSizeCheck" />
+
+</LinearLayout>

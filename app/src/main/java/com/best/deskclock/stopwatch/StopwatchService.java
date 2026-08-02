@@ -12,6 +12,7 @@ import android.os.IBinder;
 
 import com.best.deskclock.R;
 import com.best.deskclock.data.DataModel;
+import com.best.deskclock.data.Stopwatch;
 import com.best.deskclock.events.Events;
 
 /**
@@ -36,6 +37,9 @@ public final class StopwatchService extends Service {
     // resets the stopwatch if it's stopped
     public static final String ACTION_RESET_STOPWATCH = ACTION_PREFIX + "RESET_STOPWATCH";
 
+    /** Extra identifying which stopwatch an action targets; defaults to the selected stopwatch. */
+    public static final String EXTRA_STOPWATCH_ID = "com.best.deskclock.extra.STOPWATCH_ID";
+
     @Override
     public IBinder onBind(Intent intent) {
         return null;
@@ -45,19 +49,25 @@ public final class StopwatchService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         final String action = intent.getAction();
         final int label = intent.getIntExtra(Events.EXTRA_EVENT_LABEL, R.string.label_intent);
+        final int stopwatchId = intent.getIntExtra(EXTRA_STOPWATCH_ID, DataModel.getDataModel().getSelectedStopwatchId());
+        final Stopwatch stopwatch = DataModel.getDataModel().getStopwatch(stopwatchId);
+
+        // Keep notification actions aligned with the stopwatch they target.
+        DataModel.getDataModel().setSelectedStopwatchId(stopwatch.getId());
+
         if (action != null) {
             switch (action) {
                 case ACTION_START_STOPWATCH -> {
                     Events.sendStopwatchEvent(R.string.action_start, label);
-                    DataModel.getDataModel().startStopwatch();
+                    DataModel.getDataModel().startStopwatch(stopwatch);
                 }
                 case ACTION_PAUSE_STOPWATCH -> {
                     Events.sendStopwatchEvent(R.string.action_pause, label);
-                    DataModel.getDataModel().pauseStopwatch();
+                    DataModel.getDataModel().pauseStopwatch(stopwatch);
                 }
                 case ACTION_RESET_STOPWATCH -> {
                     Events.sendStopwatchEvent(R.string.action_reset, label);
-                    DataModel.getDataModel().resetStopwatch();
+                    DataModel.getDataModel().resetStopwatch(stopwatch);
                 }
                 case ACTION_LAP_STOPWATCH -> {
                     Events.sendStopwatchEvent(R.string.action_lap, label);

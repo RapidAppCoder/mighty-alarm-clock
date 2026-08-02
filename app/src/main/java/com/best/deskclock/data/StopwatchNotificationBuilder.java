@@ -16,6 +16,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.widget.RemoteViews;
 
@@ -58,7 +59,10 @@ class StopwatchNotificationBuilder {
         final String fallbackText = running ? "" : localizedContext.getString(R.string.swn_paused);
 
         final RemoteViews content = new RemoteViews(context.getPackageName(), R.layout.chronometer_notif_content);
-        content.setTextViewText(R.id.title, localizedContext.getString(R.string.stopwatch_channel));
+        final String stopwatchTitle = TextUtils.isEmpty(stopwatch.getLabel())
+            ? localizedContext.getString(R.string.stopwatch_channel)
+            : stopwatch.getLabel();
+        content.setTextViewText(R.id.title, stopwatchTitle);
 
         if (running) {
             content.setChronometer(R.id.chronometer, base, null, true);
@@ -73,7 +77,8 @@ class StopwatchNotificationBuilder {
             // Left button: Pause
             final Intent pause = new Intent(context, StopwatchService.class)
                 .setAction(StopwatchService.ACTION_PAUSE_STOPWATCH)
-                .putExtra(Events.EXTRA_EVENT_LABEL, eventLabel);
+                .putExtra(Events.EXTRA_EVENT_LABEL, eventLabel)
+                .putExtra(StopwatchService.EXTRA_STOPWATCH_ID, stopwatch.getId());
 
             @DrawableRes final int icon1 = R.drawable.ic_fab_pause;
             final CharSequence title1 = localizedContext.getText(R.string.sw_pause_button);
@@ -81,10 +86,11 @@ class StopwatchNotificationBuilder {
             actions.add(new Action.Builder(icon1, title1, intent1).build());
 
             // Right button: Add Lap
-            if (DataModel.getDataModel().canAddMoreLaps()) {
+            if (DataModel.getDataModel().canAddMoreLaps(stopwatch.getId())) {
                 final Intent lap = new Intent(context, StopwatchService.class)
                     .setAction(StopwatchService.ACTION_LAP_STOPWATCH)
-                    .putExtra(Events.EXTRA_EVENT_LABEL, eventLabel);
+                    .putExtra(Events.EXTRA_EVENT_LABEL, eventLabel)
+                    .putExtra(StopwatchService.EXTRA_STOPWATCH_ID, stopwatch.getId());
 
                 @DrawableRes final int icon2 = R.drawable.ic_stopwatch_lap;
                 final CharSequence title2 = localizedContext.getText(R.string.sw_lap_button);
@@ -93,7 +99,7 @@ class StopwatchNotificationBuilder {
             }
 
             // Show the current lap number if any laps have been recorded.
-            final int lapCount = DataModel.getDataModel().getLaps().size();
+            final int lapCount = DataModel.getDataModel().getLaps(stopwatch.getId()).size();
             if (lapCount > 0) {
                 final int lapNumber = lapCount + 1;
                 final String lap = localizedContext.getString(R.string.sw_notification_lap_number, lapNumber);
@@ -106,7 +112,8 @@ class StopwatchNotificationBuilder {
             // Left button: Start
             final Intent start = new Intent(context, StopwatchService.class)
                 .setAction(StopwatchService.ACTION_START_STOPWATCH)
-                .putExtra(Events.EXTRA_EVENT_LABEL, eventLabel);
+                .putExtra(Events.EXTRA_EVENT_LABEL, eventLabel)
+                .putExtra(StopwatchService.EXTRA_STOPWATCH_ID, stopwatch.getId());
 
             @DrawableRes final int icon1 = R.drawable.ic_fab_play;
             final CharSequence title1 = localizedContext.getText(R.string.sw_start_button);
@@ -116,7 +123,8 @@ class StopwatchNotificationBuilder {
             // Right button: Reset (dismisses notification and resets stopwatch)
             final Intent reset = new Intent(context, StopwatchService.class)
                 .setAction(StopwatchService.ACTION_RESET_STOPWATCH)
-                .putExtra(Events.EXTRA_EVENT_LABEL, eventLabel);
+                .putExtra(Events.EXTRA_EVENT_LABEL, eventLabel)
+                .putExtra(StopwatchService.EXTRA_STOPWATCH_ID, stopwatch.getId());
 
             @DrawableRes final int icon2 = R.drawable.ic_reset;
             final CharSequence title2 = localizedContext.getText(R.string.reset);
@@ -131,7 +139,7 @@ class StopwatchNotificationBuilder {
         final Builder notification = new Builder(context, STOPWATCH_NOTIFICATION_CHANNEL_ID)
             .setLocalOnly(true)
             .setOngoing(running)
-            .setContentTitle(localizedContext.getString(R.string.stopwatch_channel))
+            .setContentTitle(stopwatchTitle)
             .setContentText(fallbackText)
             .setCustomContentView(content)
             .setContentIntent(pendingShowApp)

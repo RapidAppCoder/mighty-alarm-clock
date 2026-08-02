@@ -17,16 +17,21 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.service.quicksettings.TileService;
+import android.text.TextUtils;
+import android.text.format.DateUtils;
 
 import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
 
+import com.best.deskclock.provider.EventLogStore;
 import com.best.deskclock.tiles.StopwatchTileService;
 import com.best.deskclock.utils.SdkUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * All {@link Stopwatch} data is accessed via this model.
@@ -54,7 +59,7 @@ final class StopwatchModel {
     private final BroadcastReceiver mLocaleChangedReceiver = new LocaleChangedReceiver();
 
     /**
-     * The listeners to notify when the stopwatch or its laps change.
+     * The listeners to notify when stopwatches or their laps change.
      */
     private final List<StopwatchListener> mStopwatchListeners = new ArrayList<>();
 
@@ -64,14 +69,19 @@ final class StopwatchModel {
     private final StopwatchNotificationBuilder mNotificationBuilder = new StopwatchNotificationBuilder();
 
     /**
-     * The current state of the stopwatch.
+     * The current stopwatches, loaded lazily.
      */
-    private Stopwatch mStopwatch;
+    private List<Stopwatch> mStopwatches;
 
     /**
-     * A mutable copy of the recorded stopwatch laps.
+     * Laps recorded for each stopwatch, keyed by stopwatch id.
      */
-    private List<Lap> mLaps;
+    private Map<Integer, List<Lap>> mLapsByStopwatchId;
+
+    /**
+     * The id of the stopwatch currently selected in the UI.
+     */
+    private Integer mSelectedStopwatchId;
 
     StopwatchModel(Context context, SharedPreferences prefs, NotificationModel notificationModel) {
         mContext = context.getApplicationContext();
@@ -95,80 +105,239 @@ final class StopwatchModel {
     }
 
     /**
-     * @param stopwatchListener to be notified when stopwatch changes or laps are added
+     * @param stopwatchListener to be notified when stopwatches change or laps are added
      */
     void addStopwatchListener(StopwatchListener stopwatchListener) {
         mStopwatchListeners.add(stopwatchListener);
     }
 
     /**
-     * @param stopwatchListener to no longer be notified when stopwatch changes or laps are added
+     * @param stopwatchListener to no longer be notified when stopwatches change or laps are added
      */
     void removeStopwatchListener(StopwatchListener stopwatchListener) {
         mStopwatchListeners.remove(stopwatchListener);
     }
 
     /**
-     * @return the current state of the stopwatch
+     * @return an unmodifiable list of all stopwatches
+     */
+    List<Stopwatch> getStopwatches() {
+        return Collections.unmodifiableList(getMutableStopwatches());
+    }
+
+    /**
+     * @return the currently selected stopwatch
      */
     Stopwatch getStopwatch() {
-        if (mStopwatch == null) {
-            mStopwatch = StopwatchDAO.getStopwatch(mPrefs);
-        }
-
-        return mStopwatch;
+        return getStopwatch(getSelectedStopwatchId());
     }
 
     /**
-     * @param stopwatch the new state of the stopwatch
+     * @return the stopwatch with the given id, or the selected stopwatch if not found
+     */
+    Stopwatch getStopwatch(int stopwatchId) {
+        for (Stopwatch stopwatch : getMutableStopwatches()) {
+            if (stopwatch.getId() == stopwatchId) {
+                return stopwatch;
+            }
+        }
+        return getMutableStopwatches().get(0);
+    }
+
+    int getSelectedStopwatchId() {
+        if (mSelectedStopwatchId == null) {
+            mSelectedStopwatchId = StopwatchDAO.getSelectedStopwatchId(mPrefs);
+            // Ensure the selected id refers to an existing stopwatch.
+            boolean found = false;
+            for (Stopwatch stopwatch : getMutableStopwatches()) {
+                if (stopwatch.getId() == mSelectedStopwatchId) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                mSelectedStopwatchId = getMutableStopwatches().get(0).getId();
+                StopwatchDAO.setSelectedStopwatchId(mPrefs, mSelectedStopwatchId);
+            }
+        }
+        return mSelectedStopwatchId;
+    }
+
+    void setSelectedStopwatchId(int stopwatchId) {
+        if (mSelectedStopwatchId != null && mSelectedStopwatchId == stopwatchId) {
+            return;
+        }
+        mSelectedStopwatchId = stopwatchId;
+        StopwatchDAO.setSelectedStopwatchId(mPrefs, stopwatchId);
+
+        if (!mNotificationModel.isApplicationInForeground()) {
+            updateNotification();
+        }
+    }
+
+    /**
+     * Creates and persists a new stopwatch, selects it, and notifies listeners.
+     */
+    Stopwatch addStopwatch(String label) {
+        final Stopwatch stopwatch = StopwatchDAO.addStopwatch(mPrefs,
+            new Stopwatch(Stopwatch.UNUSED_ID, Stopwatch.State.RESET, Stopwatch.UNUSED, Stopwatch.UNUSED, 0, label));
+        getMutableStopwatches().add(stopwatch);
+        getMutableLapsMap().put(stopwatch.getId(), new ArrayList<>());
+        setSelectedStopwatchId(stopwatch.getId());
+
+        for (StopwatchListener listener : mStopwatchListeners) {
+            listener.stopwatchAdded(stopwatch);
+        }
+        return stopwatch;
+    }
+
+    /**
+     * Removes the stopwatch. If it is the last one, it is reset instead of removed.
+     */
+    void removeStopwatch(Stopwatch stopwatch) {
+        if (getMutableStopwatches().size() <= 1) {
+            setStopwatch(stopwatch.reset());
+            return;
+        }
+
+        // Log any unfinished running segment before removing.
+        if (stopwatch.isRunning()) {
+            final long segmentDuration = Math.max(0, stopwatch.getTotalTime() - stopwatch.getAccumulatedTime());
+            if (segmentDuration > 0) {
+                logStopwatchStopped(stopwatch, segmentDuration);
+            }
+        }
+
+        StopwatchDAO.removeStopwatch(mPrefs, stopwatch);
+        getMutableStopwatches().remove(stopwatch);
+        getMutableLapsMap().remove(stopwatch.getId());
+
+        if (getSelectedStopwatchId() == stopwatch.getId()) {
+            mSelectedStopwatchId = getMutableStopwatches().get(0).getId();
+            StopwatchDAO.setSelectedStopwatchId(mPrefs, mSelectedStopwatchId);
+        }
+
+        if (!mNotificationModel.isApplicationInForeground()) {
+            updateNotification();
+        }
+
+        if (SdkUtils.isAtLeastAndroid7()) {
+            TileService.requestListeningState(mContext, new ComponentName(mContext, StopwatchTileService.class));
+        }
+
+        for (StopwatchListener listener : mStopwatchListeners) {
+            listener.stopwatchRemoved(stopwatch);
+        }
+    }
+
+    /**
+     * @param stopwatch the new state of a stopwatch
      */
     void setStopwatch(Stopwatch stopwatch) {
-        final Stopwatch before = getStopwatch();
-        if (before != stopwatch) {
-            StopwatchDAO.setStopwatch(mPrefs, stopwatch);
-            mStopwatch = stopwatch;
+        final Stopwatch before = getStopwatch(stopwatch.getId());
+        if (before == stopwatch) {
+            return;
+        }
 
-            // Refresh the stopwatch notification to reflect the latest stopwatch state.
-            if (!mNotificationModel.isApplicationInForeground()) {
-                updateNotification();
+        // Log a completed running segment when pausing.
+        if (before.isRunning() && stopwatch.isPaused()) {
+            final long segmentDuration = Math.max(0, stopwatch.getTotalTime() - before.getAccumulatedTime());
+            if (segmentDuration > 0) {
+                logStopwatchStopped(stopwatch, segmentDuration);
             }
+        }
 
-            if (SdkUtils.isAtLeastAndroid7()) {
-                TileService.requestListeningState(mContext, new ComponentName(mContext, StopwatchTileService.class));
+        // Log remaining time when resetting a non-reset stopwatch that was not just logged via pause.
+        // If resetting while running, log the current unfinished segment.
+        if (!before.isReset() && stopwatch.isReset()) {
+            if (before.isRunning()) {
+                final long segmentDuration = Math.max(0, before.getTotalTime() - before.getAccumulatedTime());
+                if (segmentDuration > 0) {
+                    logStopwatchStopped(before, segmentDuration);
+                }
             }
+            // Paused time was already logged on each pause; nothing more to log on reset.
+        }
 
-            // Resetting the stopwatch implicitly clears the recorded laps.
-            if (stopwatch.isReset()) {
-                clearLaps();
+        StopwatchDAO.updateStopwatch(mPrefs, stopwatch);
+        final List<Stopwatch> stopwatches = getMutableStopwatches();
+        final int index = indexOf(stopwatches, stopwatch.getId());
+        if (index >= 0) {
+            stopwatches.set(index, stopwatch);
+        }
+
+        // Refresh the stopwatch notification to reflect the latest stopwatch state.
+        if (!mNotificationModel.isApplicationInForeground()) {
+            updateNotification();
+        }
+
+        if (SdkUtils.isAtLeastAndroid7()) {
+            TileService.requestListeningState(mContext, new ComponentName(mContext, StopwatchTileService.class));
+        }
+
+        // Resetting the stopwatch implicitly clears the recorded laps.
+        if (stopwatch.isReset()) {
+            clearLaps(stopwatch.getId());
+        }
+
+        // Notify listeners of the stopwatch change.
+        for (StopwatchListener stopwatchListener : mStopwatchListeners) {
+            stopwatchListener.stopwatchUpdated(before, stopwatch);
+        }
+    }
+
+    void updateStopwatchesAfterReboot() {
+        final List<Stopwatch> stopwatches = new ArrayList<>(getMutableStopwatches());
+        for (Stopwatch stopwatch : stopwatches) {
+            final Stopwatch updated = stopwatch.updateAfterReboot();
+            if (updated != stopwatch) {
+                setStopwatch(updated);
             }
+        }
+    }
 
-            // Notify listeners of the stopwatch change.
-            for (StopwatchListener stopwatchListener : mStopwatchListeners) {
-                stopwatchListener.stopwatchUpdated(stopwatch);
+    void updateStopwatchesAfterTimeSet() {
+        final List<Stopwatch> stopwatches = new ArrayList<>(getMutableStopwatches());
+        for (Stopwatch stopwatch : stopwatches) {
+            final Stopwatch updated = stopwatch.updateAfterTimeSet();
+            if (updated != stopwatch) {
+                setStopwatch(updated);
             }
         }
     }
 
     /**
-     * @return the laps recorded for this stopwatch
+     * @return the laps recorded for the selected stopwatch
      */
     List<Lap> getLaps() {
-        return Collections.unmodifiableList(getMutableLaps());
+        return getLaps(getSelectedStopwatchId());
     }
 
     /**
-     * @return a newly recorded lap completed now; {@code null} if no more laps can be added
+     * @return the laps recorded for the given stopwatch
+     */
+    List<Lap> getLaps(int stopwatchId) {
+        return Collections.unmodifiableList(getMutableLaps(stopwatchId));
+    }
+
+    /**
+     * @return a newly recorded lap completed now on the selected stopwatch; {@code null} if no more laps can be added
      */
     Lap addLap() {
-        if (!mStopwatch.isRunning() || !canAddMoreLaps()) {
+        return addLap(getSelectedStopwatchId());
+    }
+
+    Lap addLap(int stopwatchId) {
+        final Stopwatch stopwatch = getStopwatch(stopwatchId);
+        if (!stopwatch.isRunning() || !canAddMoreLaps(stopwatchId)) {
             return null;
         }
 
-        final long totalTime = getStopwatch().getTotalTime();
-        final List<Lap> laps = getMutableLaps();
+        final long totalTime = stopwatch.getTotalTime();
+        final List<Lap> laps = getMutableLaps(stopwatchId);
 
         final int lapNumber = laps.size() + 1;
-        StopwatchDAO.addLap(mPrefs, lapNumber, totalTime);
+        StopwatchDAO.addLap(mPrefs, stopwatchId, lapNumber, totalTime);
 
         final long prevAccumulatedTime = laps.isEmpty() ? 0 : laps.get(0).getAccumulatedTime();
         final long lapTime = totalTime - prevAccumulatedTime;
@@ -185,36 +354,42 @@ final class StopwatchModel {
     }
 
     /**
-     * Clears the laps recorded for this stopwatch.
+     * Clears the laps recorded for the given stopwatch.
      */
     @VisibleForTesting
-    void clearLaps() {
-        StopwatchDAO.clearLaps(mPrefs);
-        getMutableLaps().clear();
+    void clearLaps(int stopwatchId) {
+        StopwatchDAO.clearLaps(mPrefs, stopwatchId);
+        getMutableLaps(stopwatchId).clear();
     }
 
     /**
-     * @return {@code true} iff more laps can be recorded
+     * @return {@code true} iff more laps can be recorded on the selected stopwatch
      */
     boolean canAddMoreLaps() {
-        return getLaps().size() < 98;
+        return canAddMoreLaps(getSelectedStopwatchId());
+    }
+
+    boolean canAddMoreLaps(int stopwatchId) {
+        return getLaps(stopwatchId).size() < 98;
     }
 
     /**
-     * @return the longest lap time of all recorded laps and the current lap
+     * @return the longest lap time of all recorded laps and the current lap for the selected stopwatch
      */
     long getLongestLapTime() {
+        return getLongestLapTime(getSelectedStopwatchId());
+    }
+
+    long getLongestLapTime(int stopwatchId) {
         long maxLapTime = 0;
 
-        final List<Lap> laps = getLaps();
+        final List<Lap> laps = getLaps(stopwatchId);
         if (!laps.isEmpty()) {
-            // Compute the maximum lap time across all recorded laps.
-            for (Lap lap : getLaps()) {
+            for (Lap lap : laps) {
                 maxLapTime = Math.max(maxLapTime, lap.getLapTime());
             }
 
-            // Compare with the maximum lap time for the current lap.
-            final Stopwatch stopwatch = getStopwatch();
+            final Stopwatch stopwatch = getStopwatch(stopwatchId);
             final long currentLapTime = stopwatch.getTotalTime() - laps.get(0).getAccumulatedTime();
             maxLapTime = Math.max(maxLapTime, currentLapTime);
         }
@@ -231,40 +406,109 @@ final class StopwatchModel {
      * negative elapsed times are normalized to {@code 0}
      */
     long getCurrentLapTime(long time) {
-        final Lap previousLap = getLaps().get(0);
+        return getCurrentLapTime(getSelectedStopwatchId(), time);
+    }
+
+    long getCurrentLapTime(int stopwatchId, long time) {
+        final Lap previousLap = getLaps(stopwatchId).get(0);
         final long currentLapTime = time - previousLap.getAccumulatedTime();
         return Math.max(0, currentLapTime);
     }
 
     /**
-     * Updates the notification to reflect the latest state of the stopwatch and recorded laps.
+     * @return {@code true} if any stopwatch is currently running
+     */
+    boolean isAnyStopwatchRunning() {
+        for (Stopwatch stopwatch : getMutableStopwatches()) {
+            if (stopwatch.isRunning()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Updates the notification to reflect the latest state of stopwatches and recorded laps.
+     * The notification follows the selected stopwatch when it is active; otherwise the first
+     * running or paused stopwatch.
      */
     void updateNotification() {
-        final Stopwatch stopwatch = getStopwatch();
+        final Stopwatch stopwatch = getStopwatchForNotification();
 
-        // Notification should be hidden if the stopwatch has no time or the app is open.
-        if (stopwatch.isReset() || mNotificationModel.isApplicationInForeground()) {
+        // Notification should be hidden if no stopwatch has time or the app is open.
+        if (stopwatch == null || stopwatch.isReset() || mNotificationModel.isApplicationInForeground()) {
             mNotificationManager.cancel(mNotificationModel.getStopwatchNotificationId());
             return;
         }
 
-        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(mContext, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED) {
             // Always false, because notification activation is always checked when the application is started.
             return;
         }
 
         // Otherwise build and post a notification reflecting the latest stopwatch state.
         final Notification notification = mNotificationBuilder.build(mContext, mNotificationModel, stopwatch);
-
         mNotificationManager.notify(mNotificationModel.getStopwatchNotificationId(), notification);
     }
 
-    private List<Lap> getMutableLaps() {
-        if (mLaps == null) {
-            mLaps = StopwatchDAO.getLaps(mPrefs);
+    private Stopwatch getStopwatchForNotification() {
+        final Stopwatch selected = getStopwatch();
+        if (!selected.isReset()) {
+            return selected;
         }
+        for (Stopwatch stopwatch : getMutableStopwatches()) {
+            if (stopwatch.isRunning()) {
+                return stopwatch;
+            }
+        }
+        for (Stopwatch stopwatch : getMutableStopwatches()) {
+            if (stopwatch.isPaused()) {
+                return stopwatch;
+            }
+        }
+        return null;
+    }
 
-        return mLaps;
+    private void logStopwatchStopped(Stopwatch stopwatch, long durationMs) {
+        final String uuid = "stopwatch:" + stopwatch.getId();
+        final String label = TextUtils.isEmpty(stopwatch.getLabel()) ? null : stopwatch.getLabel();
+        final String duration = DateUtils.formatElapsedTime(durationMs / 1000);
+        final String details = "duration=" + duration + " (" + durationMs + " ms)";
+        EventLogStore.logEvent(mContext.getContentResolver(), EventLogStore.EVENT_STOPWATCH_STOPPED,
+            uuid, label, details);
+    }
+
+    private List<Stopwatch> getMutableStopwatches() {
+        if (mStopwatches == null) {
+            mStopwatches = new ArrayList<>(StopwatchDAO.getStopwatches(mPrefs));
+        }
+        return mStopwatches;
+    }
+
+    private Map<Integer, List<Lap>> getMutableLapsMap() {
+        if (mLapsByStopwatchId == null) {
+            mLapsByStopwatchId = new HashMap<>();
+        }
+        return mLapsByStopwatchId;
+    }
+
+    private List<Lap> getMutableLaps(int stopwatchId) {
+        List<Lap> laps = getMutableLapsMap().get(stopwatchId);
+        if (laps == null) {
+            laps = StopwatchDAO.getLaps(mPrefs, stopwatchId);
+            getMutableLapsMap().put(stopwatchId, laps);
+        }
+        return laps;
+    }
+
+    private static int indexOf(List<Stopwatch> stopwatches, int id) {
+        for (int i = 0; i < stopwatches.size(); i++) {
+            if (stopwatches.get(i).getId() == id) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**

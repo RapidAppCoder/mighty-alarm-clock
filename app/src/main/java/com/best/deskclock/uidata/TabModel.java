@@ -20,7 +20,6 @@ import com.best.deskclock.alarms.AlarmUpdateHandler;
 import com.best.deskclock.base.AppExecutors;
 import com.best.deskclock.data.DataModel;
 import com.best.deskclock.data.SettingsDAO;
-import com.best.deskclock.data.Stopwatch;
 import com.best.deskclock.data.Timer;
 import com.best.deskclock.provider.Alarm;
 
@@ -133,12 +132,9 @@ final class TabModel {
             }
         }
 
-        // Reset running stopwatch if the Stopwatch tab is not visible
+        // Reset running stopwatches if the Stopwatch tab is not visible
         if (recentlyHiddenTabs.contains(Tab.STOPWATCH)) {
-            final Stopwatch stopwatch = DataModel.getDataModel().getStopwatch();
-            if (!stopwatch.isReset()) {
-                DataModel.getDataModel().resetStopwatch();
-            }
+            DataModel.getDataModel().resetAllStopwatches();
         }
 
         return true;
