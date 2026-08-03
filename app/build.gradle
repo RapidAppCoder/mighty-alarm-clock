@@ -43,6 +43,10 @@ android {
             minifyEnabled = true
             shrinkResources = true
             debuggable = false
+            // Keep release APKs bit-stable across machines (F-Droid reproducible builds).
+            vcsInfo {
+                include false
+            }
             manifestPlaceholders = [appName: "@string/app_label"]
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.findByName("release")
@@ -116,6 +120,13 @@ android {
     }
 
     namespace = 'com.best.deskclock'
+}
+
+// baseline.prof / ArtProfile generation is often non-deterministic across builds.
+tasks.configureEach { task ->
+    if (task.name.contains("ArtProfile")) {
+        task.enabled = false
+    }
 }
 
 dependencies {
