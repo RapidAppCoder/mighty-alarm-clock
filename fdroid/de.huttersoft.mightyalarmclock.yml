@@ -24,7 +24,7 @@ AllowedAPKSigningKeys: a4a2509ae7022d17168145ab7fa10d3c07bf102d78c4b417b6545f862
 Builds:
   - versionName: 2026.08.001
     versionCode: 202608001
-    commit: REPLACE_WITH_TAG_OR_COMMIT
+    commit: 2026.08.001
     subdir: app
     gradle:
       - yes
