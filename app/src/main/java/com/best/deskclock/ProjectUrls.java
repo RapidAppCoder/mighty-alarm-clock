@@ -4,22 +4,21 @@ package com.best.deskclock;
 
 /**
  * Public project URLs used in About, first launch, etc.
- * <p>
- * Replace {@code REPLACE_ME} with the real GitHub owner/org after the repository is created.
  */
 public final class ProjectUrls {
 
     /** Base repository URL (no trailing slash). */
-    public static final String GITHUB_REPO = "https://github.com/REPLACE_ME/mighty-alarm-clock";
+    public static final String GITHUB_REPO = "https://github.com/RapidAppCoder/mighty-alarm-clock";
 
     public static final String GITHUB_FEATURES = GITHUB_REPO + "?tab=readme-ov-file#-features";
 
     public static final String GITHUB_LICENSE = GITHUB_REPO + "/blob/main/LICENSE";
 
     /**
-     * Translation platform for this fork. Replace when a Weblate/Codeberg project exists.
+     * Translation platform for this fork.
+     * No dedicated Weblate project yet — link to the issue tracker for now.
      */
-    public static final String TRANSLATE = "https://REPLACE_ME/translate";
+    public static final String TRANSLATE = GITHUB_REPO + "/issues";
 
     private ProjectUrls() {
     }
