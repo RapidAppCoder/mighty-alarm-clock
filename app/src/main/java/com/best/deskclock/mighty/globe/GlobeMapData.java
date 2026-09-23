@@ -5,24 +5,25 @@ package com.best.deskclock.mighty.globe;
 import android.content.Context;
 import android.content.res.AssetManager;
 
-import java.io.DataInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Offline globe geometry loaded from compact big-endian binary assets under {@code assets/globe/}.
+ * Offline globe geometry loaded from text assets under {@code assets/globe/}.
  * <p>
- * Format per file: {@code int32 ringCount}; then for each ring {@code int32 n} followed by
- * {@code n} pairs of {@code float32 lat, float32 lon} (closed rings include a repeated first point).
+ * Format per file: first line is the ring count. Each ring starts with its point count,
+ * then one {@code lat lon} pair per line (closed rings include a repeated first point).
  * Source: Natural Earth / world-atlas TopoJSON, simplified offline.
  */
 final class GlobeMapData {
 
-    private static final String LAND_ASSET = "globe/land.bin";
-    private static final String COUNTRIES_ASSET = "globe/countries.bin";
+    private static final String LAND_ASSET = "globe/land.txt";
+    private static final String COUNTRIES_ASSET = "globe/countries.txt";
 
     private static volatile GlobeMapData sInstance;
 
@@ -59,27 +60,30 @@ final class GlobeMapData {
     }
 
     private static List<float[][]> loadRings(AssetManager assets, String path) {
-        try (InputStream in = assets.open(path);
-             DataInputStream data = new DataInputStream(in)) {
-            final int ringCount = data.readInt();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                assets.open(path), StandardCharsets.UTF_8))) {
+            final int ringCount = Integer.parseInt(reader.readLine());
             if (ringCount < 0 || ringCount > 10_000) {
                 return Collections.emptyList();
             }
             final List<float[][]> rings = new ArrayList<>(ringCount);
             for (int r = 0; r < ringCount; r++) {
-                final int n = data.readInt();
+                final int n = Integer.parseInt(reader.readLine());
                 if (n < 3 || n > 50_000) {
                     return Collections.emptyList();
                 }
                 final float[][] ring = new float[n][2];
                 for (int i = 0; i < n; i++) {
-                    ring[i][0] = data.readFloat();
-                    ring[i][1] = data.readFloat();
+                    final String line = reader.readLine();
+                    final int split = line.indexOf(' ');
+                    ring[i][0] = Float.parseFloat(line.substring(0, split));
+                    ring[i][1] = Float.parseFloat(line.substring(split + 1));
                 }
                 rings.add(ring);
             }
             return Collections.unmodifiableList(rings);
-        } catch (IOException e) {
+        } catch (IOException | NumberFormatException | NullPointerException
+                 | StringIndexOutOfBoundsException e) {
             return Collections.emptyList();
         }
     }
