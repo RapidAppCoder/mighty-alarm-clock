@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Room generates *Impl classes used via reflection; R8 must keep their constructors.
+-keep class * extends androidx.room.RoomDatabase {
+    <init>();
+}
